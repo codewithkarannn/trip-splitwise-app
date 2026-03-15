@@ -1,0 +1,276 @@
+<div class="min-h-screen bg-base-200 py-8 px-4">
+  <div class="max-w-6xl mx-auto">
+
+    <!-- HEADER -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
+
+      <div class="space-y-2">
+
+        <div class="flex items-center gap-3">
+          <lucide-icon [img]="Plane" class="w-5 h-5 text-primary"></lucide-icon>
+          <h1 class="text-2xl font-semibold tracking-tight">My Trips</h1>
+        </div>
+
+        <div class="text-sm opacity-60">
+          Track and manage all your adventures
+        </div>
+
+      </div>
+
+      <div class="flex gap-2">
+
+        <app-theme-switcher/>
+
+        <button
+          class="btn btn-primary btn-sm gap-2"
+          onclick="create_trip_modal.showModal()"
+        >
+          <lucide-icon [img]="Plus" class="w-4 h-4"></lucide-icon>
+          Add Trip
+        </button>
+
+        <button
+          class="btn btn-outline btn-sm gap-2"
+          onclick="join_trip_modal.showModal()"
+        >
+          <lucide-icon [img]="Link" class="w-4 h-4"></lucide-icon>
+          Join Trip
+        </button>
+
+        <button
+          class="btn btn-ghost btn-sm"
+          onclick="logout_modal.showModal()"
+        >
+          <lucide-icon [img]="LogOut" class="w-4 h-4 text-error"></lucide-icon>
+        </button>
+
+
+      </div>
+
+    </div>
+
+
+    <!-- LOADING STATE -->
+    @if (loading()) {
+      <div class="flex flex-col items-center justify-center mt-20">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+        <p class="mt-4 text-sm opacity-70">Fetching your adventures...</p>
+      </div>
+    } @else {
+
+      <!-- TRIPS GRID -->
+      @if (myTrips().length > 0) {
+
+        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+
+          @for (trip of myTrips(); track trip.id) {
+
+            <div
+              class="card bg-base-100 border border-base-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition">
+
+              <div class="card-body p-5 space-y-3">
+
+                <!-- TITLE ROW -->
+                <div class="flex justify-between items-start">
+
+                  <div>
+                    <h2 class="text-base font-semibold">{{ trip.name }}</h2>
+
+                    <div class="text-xs opacity-60 flex items-center gap-1 mt-1">
+                      <lucide-icon [img]="Calendar" class="w-3 h-3"></lucide-icon>
+                      {{ trip.tripDate | date:'mediumDate' }}
+                    </div>
+                  </div>
+
+                  @if (trip.createdBy == this.authService._user()?.uid) {
+                    <button
+                      (click)="this.selectedTripId.set(trip.id!)"
+                      class="btn btn-xs btn-ghost text-error"
+                      onclick="delete_trip_modal.showModal()"
+                    >
+                      <lucide-icon [img]="Trash" class="w-3.5 h-3.5"></lucide-icon>
+                    </button>
+                  }
+
+                </div>
+
+                <!-- MEMBERS -->
+                <div class="flex items-center gap-2 text-sm">
+                  <lucide-icon [img]="Users" class="w-4 h-4 text-info"></lucide-icon>
+                  <span class="opacity-70">Members</span>
+                  <span class="font-medium">{{ trip.members.length }}</span>
+                </div>
+
+                <!-- SHARE CODE -->
+                <div class="flex items-center gap-2 text-sm opacity-60">
+                  <lucide-icon [img]="Hash" class="w-4 h-4"></lucide-icon>
+                  <span class="text-xs font-mono">{{ trip.shareCode }}</span>
+                </div>
+
+                <!-- ACTION -->
+                <div class="pt-2">
+                  <button
+                    (click)="openTrip(trip.id)"
+                    class="btn btn-primary btn-sm w-full gap-2"
+                  >
+                    <lucide-icon [img]="ArrowRight" class="w-4 h-4"></lucide-icon>
+                    Open Trip
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
+          }
+
+        </div>
+
+      } @else {
+
+        <!-- EMPTY STATE -->
+        <div class="col-span-full text-center py-20 opacity-60">
+
+          <lucide-icon
+            [img]="Plane"
+            class="w-14 h-14 mx-auto mb-4 text-base-content/40">
+          </lucide-icon>
+
+          <p class="text-lg font-medium">No Trips Yet</p>
+
+          <p class="text-sm mt-1">
+            Create your first trip and start tracking expenses!
+          </p>
+
+          <button
+            class="btn btn-primary btn-sm mt-6 gap-2"
+            onclick="create_trip_modal.showModal()"
+          >
+            <lucide-icon [img]="Plus" class="w-4 h-4"></lucide-icon>
+            Create Trip
+          </button>
+
+        </div>
+
+      }
+
+    }
+
+  </div>
+</div>
+
+
+<!-- CREATE TRIP MODAL -->
+<dialog class="modal" id="create_trip_modal">
+  <div class="modal-box w-full max-w-xl">
+
+    <h3 class="font-semibold text-lg mb-6 flex items-center gap-2">
+      <lucide-icon [img]="Plus" class="w-5 h-5 text-primary"></lucide-icon>
+      Create New Trip
+    </h3>
+
+    <div class="space-y-4">
+
+      <input
+        [(ngModel)]="tripName"
+        class="input input-bordered w-full"
+        placeholder="Enter Trip Name"
+        type="text"
+      />
+
+      <input
+        [(ngModel)]="tripDate"
+        class="input input-bordered w-full"
+        placeholder="dd/mm/yyyy"
+        type="date"
+      />
+
+    </div>
+
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn">Cancel</button>
+      </form>
+      <button (click)="createTrip()" class="btn btn-primary gap-2">
+        <lucide-icon [img]="Plus" class="w-4 h-4"></lucide-icon>
+        Create
+      </button>
+    </div>
+
+  </div>
+</dialog>
+
+
+<!-- JOIN TRIP MODAL -->
+<dialog class="modal" id="join_trip_modal">
+  <div class="modal-box w-full max-w-xl">
+
+    <h3 class="font-semibold text-lg mb-6 flex items-center gap-2">
+      <lucide-icon [img]="Link" class="w-5 h-5 text-primary"></lucide-icon>
+      Join Trip
+    </h3>
+
+    <div class="space-y-4">
+
+      <input
+        [(ngModel)]="joinCode"
+        class="input input-bordered w-full"
+        placeholder="Enter trip code"
+        type="text"
+      />
+
+    </div>
+
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn">Cancel</button>
+      </form>
+      <button (click)="joinTrip()" class="btn btn-primary gap-2">
+        <lucide-icon [img]="ArrowRight" class="w-4 h-4"></lucide-icon>
+        Join
+      </button>
+    </div>
+
+  </div>
+</dialog>
+
+
+<!-- LOGOUT MODAL -->
+<dialog class="modal" id="logout_modal">
+  <div class="modal-box">
+
+    <h3 class="font-semibold text-lg mb-4">
+      Are you sure you want to logout?
+    </h3>
+
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn">No</button>
+      </form>
+      <button (click)="logout()" class="btn btn-primary">
+        Yes
+      </button>
+    </div>
+
+  </div>
+</dialog>
+
+
+<!-- DELETE TRIP MODAL -->
+<dialog class="modal" id="delete_trip_modal">
+  <div class="modal-box">
+
+    <h3 class="font-semibold text-lg mb-4">
+      Are you sure you want to delete?
+    </h3>
+
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn">No</button>
+      </form>
+      <button (click)="deleteTrip()" class="btn btn-error">
+        Yes, Delete
+      </button>
+    </div>
+
+  </div>
+</dialog>

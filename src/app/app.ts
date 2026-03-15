@@ -1,5 +1,8 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import {Component, inject, signal} from '@angular/core';
+import firebase from 'firebase/compat/app';
+import firestore = firebase.firestore;
+import {FireStoreService} from '../services/fire-store';
+import {RouterOutlet} from '@angular/router';
 
 @Component({
   selector: 'app-root',
@@ -8,5 +11,9 @@ import { RouterOutlet } from '@angular/router';
   styleUrl: './app.css'
 })
 export class App {
-  protected readonly title = signal('trip-splitwise-app');
+ fs = inject(FireStoreService);
+
+ add(){
+   this.fs.addTestData();
+ }
 }

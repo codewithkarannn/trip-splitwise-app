@@ -1,0 +1,123 @@
+<!-- STAT CARDS -->
+<div class="flex gap-4">
+  <!-- You Owe -->
+  <div
+    (click)="totalOwed() > 0 && showModal.set('owe')"
+    [class.cursor-pointer]="totalOwed() > 0"
+
+    class="stat bg-base-100 shadow rounded-box"
+  >
+
+    <div class="stat-title text-xs">You Owe</div>
+    <div class="stat-value text-error text-3xl">
+      ₹ {{ totalOwed() | number:'1.0-0' }}
+    </div>
+    <div class="stat-desc text-xs mt-1">
+      @if (totalOwed() > 0) {
+        Tap to see breakdown
+      } @else {
+        You're all settled! 🎉
+      }
+    </div>
+  </div>
+
+  <!-- Owed to You -->
+  <div
+    (click)="totalOwedToMe() > 0 && showModal.set('owed')"
+    [class.cursor-pointer]="totalOwedToMe() > 0"
+  
+    class="stat bg-base-100 shadow rounded-box"
+  >
+
+    <div class="stat-title text-xs">Owed to You</div>
+    <div class="stat-value text-success text-3xl">
+      ₹ {{ totalOwedToMe() | number:'1.0-0' }}
+    </div>
+    <div class="stat-desc text-xs mt-1">
+      @if (totalOwedToMe() > 0) {
+        Tap to see breakdown
+      } @else {
+        Nothing pending
+      }
+    </div>
+  </div>
+
+</div>
+
+
+<!-- BREAKDOWN MODAL -->
+<dialog [class.modal-open]="showModal() !== null" class="modal">
+  <div class="modal-box max-w-sm">
+
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-lg flex items-center gap-2">
+        @if (showModal() === 'owe') {
+          <lucide-icon [img]="IndianRupee" class="w-5 h-5 text-error"></lucide-icon>
+          You Owe
+        } @else {
+          <lucide-icon [img]="IndianRupee" class="w-5 h-5 text-success"></lucide-icon>
+          Owed to You
+        }
+      </h3>
+      <button (click)="showModal.set(null)" class="btn btn-ghost btn-sm btn-circle">
+        <lucide-icon [img]="X" class="w-4 h-4"></lucide-icon>
+      </button>
+    </div>
+
+    <div class="space-y-3">
+
+      @if (showModal() === 'owe') {
+        @for (entry of owedBreakdown(); track entry.user!.uid) {
+          <div class="flex items-center justify-between p-3 bg-base-200 rounded-box">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full overflow-hidden bg-base-300
+                          flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                @if (entry.user!.photoURL) {
+                  <img [alt]="entry.user!.name" [src]="entry.user!.photoURL"
+                       class="object-cover w-full h-full" referrerpolicy="no-referrer"/>
+                } @else {
+                  {{ entry.user!.name?.charAt(0)?.toUpperCase() }}
+                }
+              </div>
+              <span class="text-sm font-medium">{{ entry.user!.name }}</span>
+            </div>
+            <span class="text-error font-bold">₹ {{ entry.amount | number:'1.0-0' }}</span>
+          </div>
+        }
+        @if (owedBreakdown().length === 0) {
+          <p class="text-center opacity-60 py-6">You're all settled! 🎉</p>
+        }
+      }
+
+      @if (showModal() === 'owed') {
+        @for (entry of owedToMeBreakdown(); track entry.user!.uid) {
+          <div class="flex items-center justify-between p-3 bg-base-200 rounded-box">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full overflow-hidden bg-base-300
+                          flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                @if (entry.user!.photoURL) {
+                  <img [alt]="entry.user!.name" [src]="entry.user!.photoURL"
+                       class="object-cover w-full h-full" referrerpolicy="no-referrer"/>
+                } @else {
+                  {{ entry.user!.name?.charAt(0)?.toUpperCase() }}
+                }
+              </div>
+              <span class="text-sm font-medium">{{ entry.user!.name }}</span>
+            </div>
+            <span class="text-success font-bold">₹ {{ entry.amount | number:'1.0-0' }}</span>
+          </div>
+        }
+        @if (owedToMeBreakdown().length === 0) {
+          <p class="text-center opacity-60 py-6">Nothing pending</p>
+        }
+      }
+
+    </div>
+
+    <div class="modal-action">
+      <button (click)="showModal.set(null)" class="btn btn-sm w-full">Close</button>
+    </div>
+
+  </div>
+  <div (click)="showModal.set(null)" class="modal-backdrop"></div>
+</dialog>
