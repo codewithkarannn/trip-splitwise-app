@@ -3,8 +3,10 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
+    "set-env": "ts-node ./scripts/set-env.ts",
+    "start": "npm run set-env && ng serve",
+    "build": "npm run set-env && ng build",
+
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -30,6 +32,7 @@
     "@angular/platform-browser": "^20.3.0",
     "@angular/router": "^20.3.0",
     "@tailwindcss/postcss": "^4.2.1",
+    "dotenv": "^17.3.1",
     "firebase": "^11.10.0",
     "lucide-angular": "^0.575.0",
     "postcss": "^8.5.6",
@@ -42,6 +45,7 @@
     "@angular/build": "^20.3.9",
     "@angular/cli": "^20.3.9",
     "@angular/compiler-cli": "^20.3.0",
+    "@ngx-env/builder": "^20.0.0",
     "@types/jasmine": "~5.1.0",
     "daisyui": "^5.5.19",
     "jasmine-core": "~5.9.0",
@@ -50,6 +54,7 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "ts-node": "^10.9.2",
     "typescript": "~5.9.2"
   }
 }
