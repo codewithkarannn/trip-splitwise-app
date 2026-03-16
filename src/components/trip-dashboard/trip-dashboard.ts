@@ -231,8 +231,6 @@ export class TripDashboard implements OnInit {
     this.tripService.getTripById(id).subscribe(trip => {
       if (trip) {
         this.tripDetails.set(trip);
-        console.log('trip.members:', trip.members);
-        console.log('current user:', this.currentUser());
         this.getAllUsers(trip.members);
         this.getAllExpenses(id);
 
@@ -337,15 +335,11 @@ export class TripDashboard implements OnInit {
   }
 
   getUser(uid: string): AppUser | undefined {
-    console.log('looking for:', uid);
-    console.log('available:', this.connectedUserDetails());
     return this.connectedUserDetails().find(u => u.uid === uid);
   }
 
   openDeleteDialog(expenseId: string, paidBy: string) {
 
-    console.log("expenseId",expenseId);
-    console.log("paidBy",paidBy);
 
     if (paidBy !== this.currentUser().uid) return; // guard
     this.selectedExpenseId.set(expenseId);

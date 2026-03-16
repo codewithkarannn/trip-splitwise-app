@@ -10,6 +10,5 @@ export class FireStoreService {
   async addTestData() {
     const ref = collection(this.store, 'test');
     await addDoc(ref, { name: 'Hello Firebase 🔥' });
-    console.log('Data added');
   }
 }
