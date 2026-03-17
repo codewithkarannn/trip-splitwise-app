@@ -57,7 +57,6 @@ export class Dashboard implements OnInit {
       switchMap(() => this.tripService.getMyTrips())
     ).subscribe(trips => {
       this.myTrips.set(trips);
-      console.log("trips",trips);
       this.loading.set(false);
     });
   }
