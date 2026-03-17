@@ -78,7 +78,7 @@
 
                     <div class="text-xs opacity-60 flex items-center gap-1 mt-1">
                       <lucide-icon [img]="Calendar" class="w-3 h-3"></lucide-icon>
-                      {{ trip.tripDate | date:'mediumDate' }}
+                      {{ getDate(trip.tripDate)   | date:'mediumDate' }}
                     </div>
                   </div>
 
@@ -159,7 +159,6 @@
 </div>
 
 
-<!-- CREATE TRIP MODAL -->
 <dialog class="modal" id="create_trip_modal">
   <div class="modal-box w-full max-w-xl">
 
@@ -168,29 +167,58 @@
       Create New Trip
     </h3>
 
-    <div class="space-y-4">
+    <form [formGroup]="tripForm" class="space-y-4">
 
-      <input
-        [(ngModel)]="tripName"
-        class="input input-bordered w-full"
-        placeholder="Enter Trip Name"
-        type="text"
-      />
+      <!-- Name -->
+      <div class="space-y-1">
+        <input
+          [class.input-error]="tripForm.get('name')?.invalid && tripForm.get('name')?.touched"
+          class="input input-bordered w-full"
+          formControlName="name"
+          placeholder="Enter Trip Name"
+          type="text"
+        />
+        @if (tripForm.get('name')?.touched && tripForm.get('name')?.hasError('required')) {
+          <p class="text-error text-xs flex items-center gap-1">
+            <lucide-icon [img]="AlertCircle" class="w-3 h-3"></lucide-icon>
+            Trip name is required
+          </p>
+        }
+        @if (tripForm.get('name')?.touched && tripForm.get('name')?.hasError('minlength')) {
+          <p class="text-error text-xs flex items-center gap-1">
+            <lucide-icon [img]="AlertCircle" class="w-3 h-3"></lucide-icon>
+            Name must be at least 3 characters
+          </p>
+        }
+      </div>
 
-      <input
-        [(ngModel)]="tripDate"
-        class="input input-bordered w-full"
-        placeholder="dd/mm/yyyy"
-        type="date"
-      />
+      <!-- Date -->
+      <div class="space-y-1">
+        <input
+          [class.input-error]="tripForm.get('date')?.invalid && tripForm.get('date')?.touched"
+          class="input input-bordered w-full"
+          formControlName="date"
+          type="date"
+        />
+        @if (tripForm.get('date')?.touched && tripForm.get('date')?.hasError('required')) {
+          <p class="text-error text-xs flex items-center gap-1">
+            <lucide-icon [img]="AlertCircle" class="w-3 h-3"></lucide-icon>
+            Trip date is required
+          </p>
+        }
+      </div>
 
-    </div>
+    </form>
 
     <div class="modal-action">
       <form method="dialog">
-        <button class="btn">Cancel</button>
+        <button (click)="tripForm.reset({ name: '', date: today })" class="btn">Cancel</button>
       </form>
-      <button (click)="createTrip()" class="btn btn-primary gap-2">
+      <button
+        (click)="createTrip()"
+        [disabled]="tripForm.invalid"
+        class="btn btn-primary gap-2"
+      >
         <lucide-icon [img]="Plus" class="w-4 h-4"></lucide-icon>
         Create
       </button>
@@ -198,7 +226,6 @@
 
   </div>
 </dialog>
-
 
 <!-- JOIN TRIP MODAL -->
 <dialog class="modal" id="join_trip_modal">
