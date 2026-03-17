@@ -3,7 +3,22 @@ import {AuthService} from '../../services/auth-service';
 import {TripService} from '../../services/trip-service';
 import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Trip} from '../../models/trip';
-import {AlertCircle, ArrowLeft, ArrowRight, Calendar, Hash, Link, LogOut, LucideAngularModule, Plane, Plus, Trash, Users} from 'lucide-angular';
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Calendar,
+  Check,
+  Copy,
+  Hash,
+  Link,
+  LogOut,
+  LucideAngularModule,
+  Plane,
+  Plus,
+  Trash,
+  Users
+} from 'lucide-angular';
 import {DatePipe} from '@angular/common';
 import {Router} from '@angular/router';
 import {toObservable} from '@angular/core/rxjs-interop';
@@ -27,6 +42,7 @@ export class Dashboard implements OnInit {
   tripDate: string = new Date().toISOString().split('T')[0];
   loading = signal(true);
   myTrips = signal<Trip[]>([]);
+  shareCodeCopied = signal<string | null>(null);
   protected readonly Plane = Plane;
   protected readonly Plus = Plus;
   protected readonly Link = Link;
@@ -38,6 +54,8 @@ export class Dashboard implements OnInit {
   protected readonly Users = Users;
   protected readonly ArrowLeft = ArrowLeft;
   protected readonly AlertCircle = AlertCircle;
+  protected readonly Copy = Copy;
+  protected readonly Check = Check;
   private injector = inject(Injector);
   private fb = inject(FormBuilder);
   tripForm: FormGroup = this.fb.group({
@@ -99,6 +117,13 @@ export class Dashboard implements OnInit {
       alert(err.message);
       this.joinCode = '';
     }
+  }
+
+  shareCodeCopyToClipboard(text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      this.shareCodeCopied.set(text);
+      setTimeout(() => this.shareCodeCopied.set(null), 2000);
+    });
   }
 
   getDate(date: any): Date | null {

@@ -101,10 +101,25 @@
                   <span class="font-medium">{{ trip.members.length }}</span>
                 </div>
 
+
                 <!-- SHARE CODE -->
                 <div class="flex items-center gap-2 text-sm opacity-60">
                   <lucide-icon [img]="Hash" class="w-4 h-4"></lucide-icon>
                   <span class="text-xs font-mono">{{ trip.shareCode }}</span>
+
+                  <!-- Copy Button -->
+                  <button
+                    (click)="shareCodeCopyToClipboard(trip.shareCode)"
+                    [title]="'Copy share code'"
+                    class="btn btn-xs btn-ghost gap-1"
+                  >
+                    @if (shareCodeCopied() != null && trip.shareCode == this.shareCodeCopied()) {
+                      <lucide-icon [img]="Check" class="w-3 h-3 text-success"></lucide-icon>
+                    } @else {
+                      <lucide-icon [img]="Copy" class="w-3 h-3"></lucide-icon>
+                    }
+                  </button>
+
                 </div>
 
                 <!-- ACTION -->
