@@ -24,6 +24,7 @@ import {Router} from '@angular/router';
 import {toObservable} from '@angular/core/rxjs-interop';
 import {filter, switchMap, take} from 'rxjs';
 import {ThemeSwitcher} from '../theme-switcher/theme-switcher';
+import {AppUser} from '../../models/app-user';
 
 @Component({
   selector: 'app-dashboard',
@@ -39,6 +40,7 @@ export class Dashboard implements OnInit {
   selectedTripId = signal<string | null>(null);
   tripName = '';
   joinCode: string | null = null;
+  connectedUserDetails = signal<AppUser[]>([]);
   tripDate: string = new Date().toISOString().split('T')[0];
   loading = signal(true);
   myTrips = signal<Trip[]>([]);
@@ -135,11 +137,7 @@ export class Dashboard implements OnInit {
     return null;
   }
 
-  openDeleteDialog(tripId: string) {
-    this.selectedTripId.set(tripId);
-    const modal = document.getElementById('delete_trip_modal') as HTMLDialogElement;
-    modal?.showModal();
-  }
+
 
   deleteTrip() {
     const id = this.selectedTripId();
@@ -154,5 +152,20 @@ export class Dashboard implements OnInit {
     this.authService.logout();
     const modal = document.getElementById('logout_modal') as HTMLDialogElement;
     modal?.close();
+  }
+
+  getAllUsers(userIds: string[]) {
+    this.authService.getUsersByIds(userIds).subscribe(users => {
+
+      if (users && users.length > 0) {
+        this.connectedUserDetails.set(users);
+      }
+    });
+  }
+
+  protected cancelJoinTrip() {
+    const modal = document.getElementById('join_trip_modal') as HTMLDialogElement;
+    modal?.close();
+    this.joinCode = null;
   }
 }

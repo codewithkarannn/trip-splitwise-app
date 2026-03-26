@@ -254,6 +254,7 @@
     <div class="space-y-4">
 
       <input
+        (input)="joinCode = $any($event.target).value.toUpperCase()"
         [(ngModel)]="joinCode"
         class="input input-bordered w-full"
         placeholder="Enter trip code"
@@ -263,7 +264,7 @@
     </div>
 
     <div class="modal-action">
-      <form method="dialog">
+      <form (click)="cancelJoinTrip()" method="dialog">
         <button class="btn">Cancel</button>
       </form>
       <button (click)="joinTrip()" class="btn btn-primary gap-2">
@@ -316,3 +317,5 @@
 
   </div>
 </dialog>
+
+

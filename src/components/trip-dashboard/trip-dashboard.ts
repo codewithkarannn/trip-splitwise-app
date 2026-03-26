@@ -56,6 +56,7 @@ export class TripDashboard implements OnInit {
   totalExpense = signal<number>(0);
   connectedUserDetails = signal<AppUser[]>([]);
   selectedExpenseId = signal<string | null>(null);
+  transactionSplitMembers =  signal<AppUser[]>([]);
   filterDateFrom = signal<string>('');
   filterDateTo = signal<string>('');
   filterPaidBy = signal<string>('');
@@ -328,6 +329,7 @@ export class TripDashboard implements OnInit {
     const currentUid = this.currentUser()?.uid;
     if (!currentUid) return memberIds;
 
+
     return [
       ...memberIds.filter(id => id === currentUid),
       ...memberIds.filter(id => id !== currentUid)
@@ -396,5 +398,32 @@ export class TripDashboard implements OnInit {
 
     return memberIds.length === 1 && memberIds[0] === this.currentUser()?.uid;
 
+  }
+
+  protected openTransactionSplit(memberIds: string[]) {
+    const modal = document.getElementById('transaction_members_modal') as HTMLDialogElement;
+    modal?.showModal();
+
+    for(const id of memberIds) {
+      const user = this.getUser(id);
+
+      if(user)
+      {
+        this.transactionSplitMembers.update(list => [...list, user]);
+      }
+
+    }
+    this.transactionSplitMembers.update(list =>
+      [...list].sort((a, b) =>
+        (a?.name ?? '').localeCompare(b?.name ?? '')
+      )
+    );
+  }
+
+  protected onCloseTransactionSplitMembersModal() {
+    const modal = document.getElementById('transaction_members_modal') as HTMLDialogElement;
+    modal?.close();
+
+    this.transactionSplitMembers.set([]);
   }
 }

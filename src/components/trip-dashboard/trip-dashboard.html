@@ -260,27 +260,30 @@
                   ₹{{ expense.amount | number:'1.0-0' }}
                 </div>
 
-                <div class="flex justify-end gap-2">
+                @if (expense.paidBy == currentUser()?.uid) {
+                  <div class="flex justify-end gap-2">
 
-                  <button
-                    (click)="openEditDialog(expense)"
-                    [disabled]="expense.paidBy !== currentUser()?.uid"
-                    [title]="expense.paidBy !== currentUser()?.uid ? 'Only the payer can edit this expense' : ''"
-                    class="btn btn-xs btn-ghost text-primary"
-                  >
-                    Edit
-                  </button>
+                    <button
+                      (click)="openEditDialog(expense)"
+                      [disabled]="expense.paidBy !== currentUser()?.uid"
+                      [title]="expense.paidBy !== currentUser()?.uid ? 'Only the payer can edit this expense' : ''"
+                      class="btn btn-xs btn-ghost text-primary"
+                    >
+                      Edit
+                    </button>
 
-                  <button
-                    (click)="openDeleteDialog(expense.id!, expense.paidBy)"
-                    [disabled]="expense.paidBy !== currentUser()?.uid"
-                    [title]="expense.paidBy !== currentUser()?.uid ? 'Only the payer can delete this expense' : ''"
-                    class="btn btn-xs btn-ghost text-error"
-                  >
-                    Delete
-                  </button>
+                    <button
+                      (click)="openDeleteDialog(expense.id!, expense.paidBy)"
+                      [disabled]="expense.paidBy !== currentUser()?.uid"
+                      [title]="expense.paidBy !== currentUser()?.uid ? 'Only the payer can delete this expense' : ''"
+                      class="btn btn-xs btn-ghost text-error"
+                    >
+                      Delete
+                    </button>
 
-                </div>
+                  </div>
+
+                }
 
               </div>
 
@@ -334,7 +337,7 @@
 
               } @else {
 
-                <div class="flex items-center gap-2 text-sm opacity-80">
+                <div (click)="openTransactionSplit(expense.members)" class="flex items-center gap-2 text-sm opacity-80">
 
                   <lucide-icon
                     [img]="Users"
@@ -697,4 +700,85 @@
     </div>
 
   </div>
+</dialog>
+
+<!--SHOW ALL TRANSACTION USER MODAL-->
+<dialog class="modal" id="transaction_members_modal">
+
+  <div class="modal-box max-w-md">
+
+    <h3 class="font-semibold text-lg mb-6 flex items-center gap-2">
+      <lucide-icon [img]="Users" class="w-5 h-5 text-primary"></lucide-icon>
+      Split With
+    </h3>
+
+    <div class="space-y-3">
+
+      @for (user of transactionSplitMembers(); track user.uid) {
+
+        <div
+          class="flex items-center gap-3 p-3 rounded-lg bg-base-200">
+
+          <div class="avatar placeholder">
+
+            <div class="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center overflow-hidden">
+
+              @if (user.photoURL) {
+                <img
+                  [alt]="user.name"
+                  [src]="user.photoURL"
+                  class="object-cover w-full h-full"
+                  referrerpolicy="no-referrer"
+                />
+              } @else {
+                {{ user.name?.charAt(0)?.toUpperCase() }}
+              }
+
+            </div>
+          </div>
+
+          <div>
+
+            @if (user.uid === currentUser().uid) {
+              <p class="font-medium text-sm">
+                You
+              </p>
+            } @else {
+              <p class="font-medium text-sm">
+                {{ user.name }}
+              </p>
+            }
+
+            <p class="text-xs opacity-60">
+              {{ user.email }}
+            </p>
+
+          </div>
+
+        </div>
+
+      }
+
+      @if (connectedUserDetails().length === 0) {
+
+        <div class="text-center py-8 opacity-60">
+          No members found
+        </div>
+
+      }
+
+    </div>
+
+    <div class="modal-action">
+
+      <form method="dialog">
+        <button (click)="onCloseTransactionSplitMembersModal()" class="btn">
+          Close
+        </button>
+      </form>
+
+    </div>
+
+  </div>
+
 </dialog>
