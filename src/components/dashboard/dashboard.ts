@@ -1,4 +1,4 @@
-import {Component, inject, Injector, OnInit, signal} from '@angular/core';
+import {Component, inject, Injector, OnInit, signal, ViewChild} from '@angular/core';
 import {AuthService} from '../../services/auth-service';
 import {TripService} from '../../services/trip-service';
 import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
@@ -25,10 +25,11 @@ import {toObservable} from '@angular/core/rxjs-interop';
 import {filter, switchMap, take} from 'rxjs';
 import {ThemeSwitcher} from '../theme-switcher/theme-switcher';
 import {AppUser} from '../../models/app-user';
+import {UserList} from '../shared/user-list/user-list';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [FormsModule, LucideAngularModule, DatePipe, ThemeSwitcher, ReactiveFormsModule],
+  imports: [FormsModule, LucideAngularModule, DatePipe, ThemeSwitcher, ReactiveFormsModule, UserList],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
@@ -40,11 +41,14 @@ export class Dashboard implements OnInit {
   selectedTripId = signal<string | null>(null);
   tripName = '';
   joinCode: string | null = null;
-  connectedUserDetails = signal<AppUser[]>([]);
+  // connectedUserDetails = signal<AppUser[]>([]);
   tripDate: string = new Date().toISOString().split('T')[0];
   loading = signal(true);
   myTrips = signal<Trip[]>([]);
   shareCodeCopied = signal<string | null>(null);
+  currentUser = signal<AppUser>({} as AppUser);
+  userListSelectedTripId = signal<string >('');
+  @ViewChild('membersModal') membersModal!: UserList;
   protected readonly Plane = Plane;
   protected readonly Plus = Plus;
   protected readonly Link = Link;
@@ -70,11 +74,13 @@ export class Dashboard implements OnInit {
   }
 
   ngOnInit() {
-
     toObservable(this.authService._user, { injector: this.injector }).pipe(
       filter(user => !!user),
       take(1),
-      switchMap(() => this.tripService.getMyTrips())
+      switchMap(user => {
+        this.currentUser.set(user);
+        return this.tripService.getMyTrips();
+      })
     ).subscribe(trips => {
       this.myTrips.set(trips);
       this.loading.set(false);
@@ -137,8 +143,6 @@ export class Dashboard implements OnInit {
     return null;
   }
 
-
-
   deleteTrip() {
     const id = this.selectedTripId();
     if (id) {
@@ -154,15 +158,14 @@ export class Dashboard implements OnInit {
     modal?.close();
   }
 
-  getAllUsers(userIds: string[]) {
-    this.authService.getUsersByIds(userIds).subscribe(users => {
-
-      if (users && users.length > 0) {
-        this.connectedUserDetails.set(users);
-      }
-    });
+  async openMembersModal( tripId? : string ) {
+    const _tripId = tripId ;
+    if(_tripId){
+    console.log('_tripId', _tripId);
+    this.userListSelectedTripId.set(_tripId);
+    this.membersModal.open();
+    }
   }
-
   protected cancelJoinTrip() {
     const modal = document.getElementById('join_trip_modal') as HTMLDialogElement;
     modal?.close();

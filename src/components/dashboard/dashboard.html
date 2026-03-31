@@ -98,7 +98,7 @@
                 <div class="flex items-center gap-2 text-sm">
                   <lucide-icon [img]="Users" class="w-4 h-4 text-info"></lucide-icon>
                   <span class="opacity-70">Members</span>
-                  <span class="font-medium">{{ trip.members.length }}</span>
+                  <span (click)="openMembersModal(trip?.id)" class="font-medium">{{ trip.members.length }}</span>
                 </div>
 
 
@@ -173,7 +173,7 @@
   </div>
 </div>
 
-
+<!--ADD NEW TRIP MODAL-->
 <dialog class="modal" id="create_trip_modal">
   <div class="modal-box w-full max-w-xl">
 
@@ -319,3 +319,8 @@
 </dialog>
 
 
+<app-user-list
+  #membersModal
+  [currentUser]="this.currentUser()"
+  [tripId]="this.userListSelectedTripId()"
+></app-user-list>
