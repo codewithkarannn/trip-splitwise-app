@@ -250,17 +250,37 @@ export class TripDashboard implements OnInit {
 
   getAllExpenses(tripId: string) {
     this.expenseService.getExpenses(tripId).subscribe(expenses => {
-      if (expenses) {
-        this.tripExpenses.set(expenses);
 
-        this.totalExpense.set(
-          this.tripExpenses().reduce((sum, expense) => sum + expense.amount, 0)
-        );
-        // this.initForm();
-      }
+      if (!expenses) return;
+
+      const currentUserId = this.currentUser()?.uid;
+
+      const filteredExpenses = expenses.filter(expense =>
+        expense.members.includes(currentUserId) ||
+        expense.paidBy === currentUserId
+      );
+
+      this.tripExpenses.set(filteredExpenses);
+      const total = filteredExpenses.reduce((sum, expense) => {
+
+        const isPersonal =
+          expense.members.length === 1 &&
+          expense.members[0] === currentUserId;
+
+        if (isPersonal) {
+          return sum + expense.amount;
+        }
+
+        // Split case
+        const splitAmount = expense.amount / expense.members.length;
+        return sum + splitAmount;
+
+      }, 0);
+
+      this.totalExpense.set(total);
+
     });
   }
-
   async addExpense() {
     if (this.expenseForm.invalid) {
       this.expenseForm.markAllAsTouched();
@@ -392,6 +412,23 @@ export class TripDashboard implements OnInit {
         currentUser ? [currentUser, ...otherUsers] : otherUsers
       );
     }
+  }
+
+  getUserShare(expense: Expense): number {
+    const currentUserId = this.currentUser()?.uid;
+
+    if (!currentUserId) return 0;
+
+    const isPersonal =
+      expense.members.length === 1 &&
+      expense.members[0] === currentUserId;
+
+    if (isPersonal) {
+      return expense.amount; // full amount
+    }
+
+    // split case
+    return expense.amount / expense.members.length;
   }
 
   isPersonalExpense(memberIds: string[]): boolean {

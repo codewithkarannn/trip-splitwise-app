@@ -65,7 +65,7 @@
       <!--      </div>-->
 
       <div class="stat bg-base-100 shadow rounded-box">
-        <div class="stat-title text-xs">Total Trip Amount</div>
+        <div class="stat-title text-xs">Your Total Trip Expense</div>
 
         <div class="stat-value text-primary text-3xl">
           ₹ {{ totalExpense() | number:'1.0-0' }} <span class="text-xl">({{ tripExpenses().length }})</span>
@@ -257,7 +257,19 @@
               <div class="text-right space-y-1">
 
                 <div class="text-lg font-bold text-secondary">
-                  ₹{{ expense.amount | number:'1.0-0' }}
+                  <div class="flex flex-col">
+
+                    <span class="font-semibold">
+                      ₹ {{ getUserShare(expense) | number:'1.0-2' }}
+                    </span>
+
+                    @if (!isPersonalExpense(expense.members)) {
+                      <span class="text-xs opacity-60">
+                        (Split from ₹ {{ expense.amount }})
+                      </span>
+                    }
+
+                  </div>
                 </div>
 
                 @if (expense.paidBy == currentUser()?.uid) {
