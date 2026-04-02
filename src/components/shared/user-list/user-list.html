@@ -1,0 +1,80 @@
+<!--SHOW ALL USER MODAL-->
+<dialog #dialogRef class="modal">
+
+  <div class="modal-box max-w-md">
+
+    <h3 class="font-semibold text-lg mb-6 flex items-center gap-2">
+      <lucide-icon [img]="Users" class="w-5 h-5 text-primary"></lucide-icon>
+      Trip Members
+    </h3>
+
+    <div class="space-y-3">
+
+      @for (user of connectedUserDetails(); track user.email) {
+
+        <div
+          class="flex items-center gap-3 p-3 rounded-lg bg-base-200">
+
+          <div class="avatar placeholder">
+
+            <div class="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center overflow-hidden">
+
+              @if (user.photoURL) {
+                <img
+                  [alt]="user.name"
+                  [src]="user.photoURL"
+                  class="object-cover w-full h-full"
+                  referrerpolicy="no-referrer"
+                />
+              } @else {
+                {{ user.name?.charAt(0)?.toUpperCase() }}
+              }
+
+            </div>
+          </div>
+
+          <div>
+
+            @if (user.uid === currentUser()?.uid) {
+              <p class="font-medium text-sm">
+                You
+              </p>
+            } @else {
+              <p class="font-medium text-sm">
+                {{ user.name }}
+              </p>
+            }
+
+            <p class="text-xs opacity-60">
+              {{ user.email }}
+            </p>
+
+          </div>
+
+        </div>
+
+      }
+
+      @if (connectedUserDetails().length === 0) {
+
+        <div class="text-center py-8 opacity-60">
+          No members found
+        </div>
+
+      }
+
+    </div>
+
+    <div class="modal-action">
+
+      <form method="dialog">
+        <button class="btn">
+          Close
+        </button>
+      </form>
+
+    </div>
+
+  </div>
+
+</dialog>

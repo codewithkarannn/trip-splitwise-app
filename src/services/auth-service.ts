@@ -1,4 +1,4 @@
-import {computed, DestroyRef, inject, Injectable} from '@angular/core';
+import {DestroyRef, inject, Injectable} from '@angular/core';
 import {Auth, authState} from '@angular/fire/auth';
 import {GoogleAuthProvider, signInWithPopup, signOut, User} from 'firebase/auth';
 import {collection, doc, onSnapshot, query, setDoc, where} from 'firebase/firestore';
@@ -12,8 +12,7 @@ import {Firestore} from '@angular/fire/firestore';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
 
-  isLoggedIn = computed(() => !!this._user());
-  isLoaded = computed(() => this._user() !== undefined);
+
   private auth = inject(Auth);
   private router = inject(Router);
   private fireStore = inject(Firestore);
@@ -68,7 +67,7 @@ export class AuthService {
   }
 
   getUsersByIds(ids: string[]): Observable<AppUser[]> {
-    // Guard: empty array se Firestore crash hota hai
+
     if (!ids.length) return of([]);
 
     return new Observable(observer => {

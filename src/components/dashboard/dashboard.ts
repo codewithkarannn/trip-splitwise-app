@@ -1,18 +1,35 @@
-import {Component, inject, Injector, OnInit, signal} from '@angular/core';
+import {Component, inject, Injector, OnInit, signal, ViewChild} from '@angular/core';
 import {AuthService} from '../../services/auth-service';
 import {TripService} from '../../services/trip-service';
 import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Trip} from '../../models/trip';
-import {AlertCircle, ArrowLeft, ArrowRight, Calendar, Hash, Link, LogOut, LucideAngularModule, Plane, Plus, Trash, Users} from 'lucide-angular';
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Calendar,
+  Check,
+  Copy,
+  Hash,
+  Link,
+  LogOut,
+  LucideAngularModule,
+  Plane,
+  Plus,
+  Trash,
+  Users
+} from 'lucide-angular';
 import {DatePipe} from '@angular/common';
 import {Router} from '@angular/router';
 import {toObservable} from '@angular/core/rxjs-interop';
 import {filter, switchMap, take} from 'rxjs';
 import {ThemeSwitcher} from '../theme-switcher/theme-switcher';
+import {AppUser} from '../../models/app-user';
+import {UserList} from '../shared/user-list/user-list';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [FormsModule, LucideAngularModule, DatePipe, ThemeSwitcher, ReactiveFormsModule],
+  imports: [FormsModule, LucideAngularModule, DatePipe, ThemeSwitcher, ReactiveFormsModule, UserList],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
@@ -24,9 +41,14 @@ export class Dashboard implements OnInit {
   selectedTripId = signal<string | null>(null);
   tripName = '';
   joinCode: string | null = null;
+  // connectedUserDetails = signal<AppUser[]>([]);
   tripDate: string = new Date().toISOString().split('T')[0];
   loading = signal(true);
   myTrips = signal<Trip[]>([]);
+  shareCodeCopied = signal<string | null>(null);
+  currentUser = signal<AppUser>({} as AppUser);
+  userListSelectedTripId = signal<string >('');
+  @ViewChild('membersModal') membersModal!: UserList;
   protected readonly Plane = Plane;
   protected readonly Plus = Plus;
   protected readonly Link = Link;
@@ -38,6 +60,8 @@ export class Dashboard implements OnInit {
   protected readonly Users = Users;
   protected readonly ArrowLeft = ArrowLeft;
   protected readonly AlertCircle = AlertCircle;
+  protected readonly Copy = Copy;
+  protected readonly Check = Check;
   private injector = inject(Injector);
   private fb = inject(FormBuilder);
   tripForm: FormGroup = this.fb.group({
@@ -50,11 +74,13 @@ export class Dashboard implements OnInit {
   }
 
   ngOnInit() {
-
     toObservable(this.authService._user, { injector: this.injector }).pipe(
       filter(user => !!user),
       take(1),
-      switchMap(() => this.tripService.getMyTrips())
+      switchMap(user => {
+        this.currentUser.set(user);
+        return this.tripService.getMyTrips();
+      })
     ).subscribe(trips => {
       this.myTrips.set(trips);
       this.loading.set(false);
@@ -101,6 +127,13 @@ export class Dashboard implements OnInit {
     }
   }
 
+  shareCodeCopyToClipboard(text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      this.shareCodeCopied.set(text);
+      setTimeout(() => this.shareCodeCopied.set(null), 2000);
+    });
+  }
+
   getDate(date: any): Date | null {
     if (!date) return null;                                          // missing
     if (date instanceof Date) return date;                          // already Date
@@ -108,12 +141,6 @@ export class Dashboard implements OnInit {
     if (date?.seconds) return new Date(date.seconds * 1000);       // plain object {seconds, nanoseconds}
     if (typeof date === 'string') return new Date(date);           // string "2026-04-11"
     return null;
-  }
-
-  openDeleteDialog(tripId: string) {
-    this.selectedTripId.set(tripId);
-    const modal = document.getElementById('delete_trip_modal') as HTMLDialogElement;
-    modal?.showModal();
   }
 
   deleteTrip() {
@@ -129,5 +156,19 @@ export class Dashboard implements OnInit {
     this.authService.logout();
     const modal = document.getElementById('logout_modal') as HTMLDialogElement;
     modal?.close();
+  }
+
+  async openMembersModal( tripId? : string ) {
+    const _tripId = tripId ;
+    if(_tripId){
+    console.log('_tripId', _tripId);
+    this.userListSelectedTripId.set(_tripId);
+    this.membersModal.open();
+    }
+  }
+  protected cancelJoinTrip() {
+    const modal = document.getElementById('join_trip_modal') as HTMLDialogElement;
+    modal?.close();
+    this.joinCode = null;
   }
 }

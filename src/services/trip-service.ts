@@ -5,6 +5,7 @@ import {Trip} from '../models/trip';
 import {Firestore} from '@angular/fire/firestore';
 import {Observable, of, switchMap} from 'rxjs';
 import {Auth, authState} from '@angular/fire/auth';
+import {AppUser} from '../models/app-user';
 
 @Injectable({
   providedIn: 'root',
@@ -91,6 +92,59 @@ export class TripService {
     return deleteDoc(tripDoc);
   }
 
+  getMembersByTripId(tripId: string): Observable<AppUser[]> {
+    return new Observable(observer => {
+
+      const tripRef = doc(this.fireStore, `trips/${tripId}`);
+
+      //  Listen to trip changes in real-time
+      const unsubTrip = onSnapshot(tripRef, async (tripSnap) => {
+
+        if (!tripSnap.exists()) {
+          observer.next([]);
+          return;
+        }
+
+        const trip = tripSnap.data() as any;
+        const memberIds: string[] = trip.memberIds || trip.members || [];
+
+        if (!memberIds.length) {
+          observer.next([]);
+          return;
+        }
+
+        const usersRef = collection(this.fireStore, 'users');
+
+        const chunkSize = 10;
+        const chunks: string[][] = [];
+
+        for (let i = 0; i < memberIds.length; i += chunkSize) {
+          chunks.push(memberIds.slice(i, i + chunkSize));
+        }
+
+        let results: any[] = [];
+
+        //  getDocs = one-time fetch (simpler & safe)
+        for (const chunk of chunks) {
+          const q = query(usersRef, where('__name__', 'in', chunk));
+          const snapshot = await getDocs(q);
+
+          results.push(
+            ...snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }))
+          );
+        }
+
+        observer.next(results);
+
+      }, error => observer.error(error));
+
+      // cleanup
+      return () => unsubTrip();
+    });
+  }
   private generateShareCode(): string {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   }

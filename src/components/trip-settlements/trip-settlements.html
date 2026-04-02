@@ -1,13 +1,12 @@
 <!-- STAT CARDS -->
 <div class="flex gap-4">
+
   <!-- You Owe -->
   <div
     (click)="totalOwed() > 0 && showModal.set('owe')"
     [class.cursor-pointer]="totalOwed() > 0"
-
     class="stat bg-base-100 shadow rounded-box"
   >
-
     <div class="stat-title text-xs">You Owe</div>
     <div class="stat-value text-error text-3xl">
       ₹ {{ totalOwed() | number:'1.0-0' }}
@@ -25,10 +24,8 @@
   <div
     (click)="totalOwedToMe() > 0 && showModal.set('owed')"
     [class.cursor-pointer]="totalOwedToMe() > 0"
-  
     class="stat bg-base-100 shadow rounded-box"
   >
-
     <div class="stat-title text-xs">Owed to You</div>
     <div class="stat-value text-success text-3xl">
       ₹ {{ totalOwedToMe() | number:'1.0-0' }}
@@ -66,47 +63,107 @@
 
     <div class="space-y-3">
 
+      <!-- YOU OWE SECTION -->
       @if (showModal() === 'owe') {
         @for (entry of owedBreakdown(); track entry.user!.uid) {
-          <div class="flex items-center justify-between p-3 bg-base-200 rounded-box">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-full overflow-hidden bg-base-300
-                          flex items-center justify-center text-sm font-semibold flex-shrink-0">
-                @if (entry.user!.photoURL) {
-                  <img [alt]="entry.user!.name" [src]="entry.user!.photoURL"
-                       class="object-cover w-full h-full" referrerpolicy="no-referrer"/>
-                } @else {
-                  {{ entry.user!.name?.charAt(0)?.toUpperCase() }}
-                }
+          <div class="flex flex-col gap-1.5 p-3 bg-base-200 rounded-box">
+
+            <div class="flex items-center justify-between">
+
+              <!-- Avatar + Name -->
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full overflow-hidden bg-base-300
+                            flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                  @if (entry.user!.photoURL) {
+                    <img [alt]="entry.user!.name" [src]="entry.user!.photoURL"
+                         class="object-cover w-full h-full" referrerpolicy="no-referrer"/>
+                  } @else {
+                    {{ entry.user!.name?.charAt(0)?.toUpperCase() }}
+                  }
+                </div>
+                <span class="text-sm font-medium">{{ entry.user!.name }}</span>
               </div>
-              <span class="text-sm font-medium">{{ entry.user!.name }}</span>
+
+              <!-- Amount -->
+              <div class="text-right">
+                @if (entry.wasMutual) {
+                  <!-- Strikethrough original -->
+                  <div class="text-xs line-through opacity-40 text-error">
+                    ₹ {{ entry.originalAmount | number:'1.0-0' }}
+                  </div>
+                }
+                <span class="text-error font-bold">₹ {{ entry.amount | number:'1.0-0' }}</span>
+              </div>
+
             </div>
-            <span class="text-error font-bold">₹ {{ entry.amount | number:'1.0-0' }}</span>
+
+            <!-- Mutual deduction hint -->
+            @if (entry.wasMutual) {
+              <div class="flex items-center gap-1.5 text-xs text-warning bg-warning/10
+                          border border-warning/20 rounded-lg px-2 py-1">
+                <span>↕</span>
+                <span>
+                  Mutual expenses deducted — saved ₹ {{ entry.savedAmount | number:'1.0-0' }}
+                </span>
+              </div>
+            }
+
           </div>
         }
+
         @if (owedBreakdown().length === 0) {
           <p class="text-center opacity-60 py-6">You're all settled! 🎉</p>
         }
       }
 
+      <!-- OWED TO YOU SECTION -->
       @if (showModal() === 'owed') {
         @for (entry of owedToMeBreakdown(); track entry.user!.uid) {
-          <div class="flex items-center justify-between p-3 bg-base-200 rounded-box">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-full overflow-hidden bg-base-300
-                          flex items-center justify-center text-sm font-semibold flex-shrink-0">
-                @if (entry.user!.photoURL) {
-                  <img [alt]="entry.user!.name" [src]="entry.user!.photoURL"
-                       class="object-cover w-full h-full" referrerpolicy="no-referrer"/>
-                } @else {
-                  {{ entry.user!.name?.charAt(0)?.toUpperCase() }}
-                }
+          <div class="flex flex-col gap-1.5 p-3 bg-base-200 rounded-box">
+
+            <div class="flex items-center justify-between">
+
+              <!-- Avatar + Name -->
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full overflow-hidden bg-base-300
+                            flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                  @if (entry.user!.photoURL) {
+                    <img [alt]="entry.user!.name" [src]="entry.user!.photoURL"
+                         class="object-cover w-full h-full" referrerpolicy="no-referrer"/>
+                  } @else {
+                    {{ entry.user!.name?.charAt(0)?.toUpperCase() }}
+                  }
+                </div>
+                <span class="text-sm font-medium">{{ entry.user!.name }}</span>
               </div>
-              <span class="text-sm font-medium">{{ entry.user!.name }}</span>
+
+              <!-- Amount -->
+              <div class="text-right">
+                @if (entry.wasMutual) {
+                  <!-- Strikethrough original -->
+                  <div class="text-xs line-through opacity-40 text-success">
+                    ₹ {{ entry.originalAmount | number:'1.0-0' }}
+                  </div>
+                }
+                <span class="text-success font-bold">₹ {{ entry.amount | number:'1.0-0' }}</span>
+              </div>
+
             </div>
-            <span class="text-success font-bold">₹ {{ entry.amount | number:'1.0-0' }}</span>
+
+            <!-- Mutual deduction hint -->
+            @if (entry.wasMutual) {
+              <div class="flex items-center gap-1.5 text-xs text-warning bg-warning/10
+                          border border-warning/20 rounded-lg px-2 py-1">
+                <span>↕</span>
+                <span>
+                  Mutual expenses deducted — saved ₹ {{ entry.savedAmount | number:'1.0-0' }}
+                </span>
+              </div>
+            }
+
           </div>
         }
+
         @if (owedToMeBreakdown().length === 0) {
           <p class="text-center opacity-60 py-6">Nothing pending</p>
         }
