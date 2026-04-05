@@ -101,15 +101,21 @@
 
       } @else if (platform() === 'ios') {
 
-        <!-- iOS: no deep link, show instructions -->
-        <div class="bg-warning/10 border border-warning/20 rounded-box p-3 mb-4 text-xs
-                    text-warning space-y-1">
-          <p class="font-medium">Open your UPI app manually</p>
-          <p class="text-warning/70">
-            Copy the UPI ID above and paste it in GPay, PhonePe, or Paytm to pay.
-          </p>
+        <div class="grid grid-cols-2 gap-3 mb-4">
+
+          @for (app of upiApps; track app.name) {
+            <button
+              (click)="openUpiApp(app)"
+              class="flex items-center gap-2 border rounded-lg p-2 hover:bg-base-200 transition">
+
+              <img [src]="app.icon" class="w-6 h-6"/>
+              <span class="text-sm font-medium">{{ app.name }}</span>
+            </button>
+          }
+
         </div>
 
+        <!-- Copy Button -->
         <button (click)="copyUpiId()" class="btn btn-outline w-full gap-2 mb-2">
           @if (copied()) {
             <lucide-icon [img]="Check" class="w-4 h-4 text-success"></lucide-icon>
@@ -120,6 +126,7 @@
           }
         </button>
 
+        <!-- Confirm -->
         <button (click)="confirmPayment()" class="btn btn-primary w-full">
           I've Paid — Mark as Done
         </button>
