@@ -5,6 +5,7 @@ import {UpiService} from '../../services/upi-service';
 import {UpiPaymentDetails} from '../../models/upi-payment-details';
 import {Check, Copy, LucideAngularModule, Smartphone, X} from 'lucide-angular';
 
+
 @Component({
   selector: 'app-upi-payment',
   imports: [
@@ -23,6 +24,28 @@ export class UpiPayment {
 
   copied   = signal(false);
   platform = signal<'android' | 'ios' | 'desktop'>('desktop');
+  upiApps = [
+    {
+      name: 'Google Pay',
+      icon: 'assets/googlepay.svg',
+      scheme: 'gpay://upi/pay'
+    },
+    {
+      name: 'PhonePe',
+      icon: 'assets/phonepe.png',
+      scheme: 'phonepe://pay'
+    },
+    {
+      name: 'Paytm',
+      icon: 'assets/paytm.png',
+      scheme: 'paytmmp://pay'
+    },
+    {
+      name: 'BHIM',
+      icon: 'assets/bhim.png',
+      scheme: 'bhim://upi/pay'
+    }
+  ];
   protected readonly Smartphone = Smartphone;
   protected readonly X = X;
   protected readonly Check = Check;
@@ -77,6 +100,19 @@ constructor() {
 
   cancel() {
     this.cancelled.emit();
+  }
+
+  openUpiApp(app: any) {
+    const d = this.details;
+
+    const url = `${app.scheme}?pa=${this.payer().upiId}&pn=${this.payer().name}&am=${d.amount}&tn=${d.note}`;
+
+    window.location.href = url;
+
+    // fallback if app not installed
+    setTimeout(() => {
+      alert('If app did not open, please use Copy UPI ID');
+    }, 2000);
   }
 
   private confirmDialog() {

@@ -69,15 +69,35 @@
       <!-- Platform-specific CTA -->
       @if (platform() === 'android') {
 
-        <!-- Android: deep link opens UPI app chooser -->
-        <button (click)="pay()" class="btn btn-primary w-full gap-2">
-          <lucide-icon [img]="Smartphone" class="w-4 h-4"></lucide-icon>
-          Open UPI App
+        <div class="grid grid-cols-2 gap-3 mb-4">
+
+          @for (app of upiApps; track app.name) {
+            <button
+              (click)="openUpiApp(app)"
+              class="flex items-center gap-2 border rounded-lg p-2 hover:bg-base-200 transition">
+
+              <img [src]="app.icon" class="w-6 h-6"/>
+              <span class="text-sm font-medium">{{ app.name }}</span>
+            </button>
+          }
+
+        </div>
+
+        <!-- Copy Button -->
+        <button (click)="copyUpiId()" class="btn btn-outline w-full gap-2 mb-2">
+          @if (copied()) {
+            <lucide-icon [img]="Check" class="w-4 h-4 text-success"></lucide-icon>
+            Copied!
+          } @else {
+            <lucide-icon [img]="Copy" class="w-4 h-4"></lucide-icon>
+            Copy UPI ID
+          }
         </button>
 
-        <p class="text-xs text-center text-base-content/40 mt-2">
-          GPay / PhonePe / Paytm will open automatically
-        </p>
+        <!-- Confirm -->
+        <button (click)="confirmPayment()" class="btn btn-primary w-full">
+          I've Paid — Mark as Done
+        </button>
 
       } @else if (platform() === 'ios') {
 
