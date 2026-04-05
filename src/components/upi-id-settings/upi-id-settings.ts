@@ -1,32 +1,35 @@
 import {Component, inject, input, OnInit, output, signal} from '@angular/core';
-import {AppUser} from '../../models/app-user';
-import {UpiService} from '../../services/upi-service';
-import {AlertCircle, Check, LucideAngularModule, Pencil} from 'lucide-angular';
 import {FormsModule} from '@angular/forms';
+
+import {AlertCircle, Check, LucideAngularModule, Pencil, Trash, X} from 'lucide-angular';
+import {UpiService} from '../../services/upi-service';
+import {AppUser} from '../../models/app-user';
 
 @Component({
   selector: 'app-upi-id-settings',
-  imports: [
-    LucideAngularModule,
-    FormsModule
-  ],
+  imports: [FormsModule, LucideAngularModule],
   templateUrl: './upi-id-settings.html',
-  styleUrl: './upi-id-settings.css',
 })
 export class UpiIdSettings implements OnInit {
 
-
   currentUser = input.required<AppUser>();
-   saved = output<string>();   // emits the saved UPI ID
 
-  upiId      = signal('');
-  isEditing  = signal(false);
-  isSaving   = signal(false);
-  saveError  = signal('');
-  saveSuccess = signal(false);
-  protected readonly Pencil = Pencil;
-  protected readonly Check = Check;
+  saved   = output<string>();
+  removed = output<void>();
+
+  upiId        = signal('');
+  isEditing    = signal(false);
+  isRemoving   = signal(false);  // confirm remove state
+  isSaving     = signal(false);
+  saveError    = signal('');
+  saveSuccess  = signal(false);
+
+  protected readonly Pencil      = Pencil;
+  protected readonly Check       = Check;
+  protected readonly X           = X;
   protected readonly AlertCircle = AlertCircle;
+  protected readonly Trash       = Trash;
+
   private upiService = inject(UpiService);
 
   get isValid(): boolean {
@@ -39,11 +42,12 @@ export class UpiIdSettings implements OnInit {
 
   startEdit() {
     this.isEditing.set(true);
+    this.isRemoving.set(false);
     this.saveError.set('');
     this.saveSuccess.set(false);
   }
 
-  cancel() {
+  cancelEdit() {
     this.upiId.set(this.currentUser()?.upiId ?? '');
     this.isEditing.set(false);
     this.saveError.set('');
@@ -70,9 +74,27 @@ export class UpiIdSettings implements OnInit {
       this.isSaving.set(false);
     }
   }
-  
-  applyHandle(handle: string) {
-    const name = this.upiId()?.split('@')[0] || '';
-    this.upiId.set(name + handle);
+
+  confirmRemove() {
+    this.isRemoving.set(true);
+    this.isEditing.set(false);
+  }
+
+  cancelRemove() {
+    this.isRemoving.set(false);
+  }
+
+  async remove() {
+    this.isSaving.set(true);
+    try {
+      await this.upiService.saveUpiId(this.currentUser().uid, '');
+      this.upiId.set('');
+      this.isRemoving.set(false);
+      this.removed.emit();
+    } catch {
+      this.saveError.set('Failed to remove. Please try again.');
+    } finally {
+      this.isSaving.set(false);
+    }
   }
 }

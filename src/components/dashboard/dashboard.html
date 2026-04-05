@@ -1,57 +1,89 @@
 <div class="min-h-screen bg-base-200 py-8 px-4">
   <div class="max-w-6xl mx-auto">
-    <app-upi-id-settings
-      (saved)="onUpiSaved($event)"
-      [currentUser]="currentUser()"
-    />
+
     <!-- HEADER -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
 
       <div class="space-y-2">
-
         <div class="flex items-center gap-3">
           <lucide-icon [img]="Plane" class="w-5 h-5 text-primary"></lucide-icon>
           <h1 class="text-2xl font-semibold tracking-tight">My Trips</h1>
         </div>
-
         <div class="text-sm opacity-60">
           Track and manage all your adventures
         </div>
-
       </div>
 
+      <!-- HEADER BUTTONS -->
       <div class="flex gap-2">
 
         <app-theme-switcher/>
 
+        <!-- UPI Button + timed nudge popover -->
+        <div class="relative">
+          <button
+            (click)="showUpiModal.set(true); dismissNudge()"
+            [class.btn-ghost]="!!currentUser().upiId"
+            [class.btn-warning]="!currentUser().upiId"
+            class="btn btn-sm gap-2">
+            <lucide-icon [img]="Wallet" class="w-4 h-4"></lucide-icon>
+            {{ currentUser().upiId ? 'My UPI' : 'Add UPI' }}
+          </button>
+
+          <!-- Timed nudge — auto hides after 5s -->
+          @if (showUpiNudge()) {
+            <div class="absolute top-11 right-0 z-50 w-56 bg-warning text-warning-content
+                        rounded-box p-3 shadow-lg">
+
+              <!-- Arrow pointing up -->
+              <div class="absolute -top-1.5 right-4 w-3 h-3 bg-warning rotate-45 rounded-sm"></div>
+
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <p class="text-xs font-semibold">Add your UPI ID</p>
+                  <p class="text-xs opacity-80 mt-0.5 leading-relaxed">
+                    So others can pay you directly from the app
+                  </p>
+                </div>
+                <button
+                  (click)="dismissNudge()"
+                  class="opacity-60 hover:opacity-100 transition flex-shrink-0 mt-0.5">
+                  <lucide-icon [img]="X" class="w-3.5 h-3.5"></lucide-icon>
+                </button>
+              </div>
+
+              <!-- Shrinking progress bar -->
+              <div class="mt-2 h-0.5 bg-warning-content/20 rounded-full overflow-hidden">
+                <div class="h-full bg-warning-content/50 rounded-full nudge-progress"></div>
+              </div>
+
+            </div>
+          }
+        </div>
+
         <button
           class="btn btn-primary btn-sm gap-2"
-          onclick="create_trip_modal.showModal()"
-        >
+          onclick="create_trip_modal.showModal()">
           <lucide-icon [img]="Plus" class="w-4 h-4"></lucide-icon>
           Add Trip
         </button>
 
         <button
           class="btn btn-outline btn-sm gap-2"
-          onclick="join_trip_modal.showModal()"
-        >
+          onclick="join_trip_modal.showModal()">
           <lucide-icon [img]="Link" class="w-4 h-4"></lucide-icon>
           Join Trip
         </button>
 
         <button
           class="btn btn-ghost btn-sm"
-          onclick="logout_modal.showModal()"
-        >
+          onclick="logout_modal.showModal()">
           <lucide-icon [img]="LogOut" class="w-4 h-4 text-error"></lucide-icon>
         </button>
-
 
       </div>
 
     </div>
-
 
     <!-- LOADING STATE -->
     @if (loading()) {
@@ -68,20 +100,17 @@
 
           @for (trip of myTrips(); track trip.id) {
 
-            <div
-              class="card bg-base-100 border border-base-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition">
-
+            <div class="card bg-base-100 border border-base-200 shadow-sm
+                        hover:shadow-lg hover:-translate-y-1 transition">
               <div class="card-body p-5 space-y-3">
 
                 <!-- TITLE ROW -->
                 <div class="flex justify-between items-start">
-
                   <div>
                     <h2 class="text-base font-semibold">{{ trip.name }}</h2>
-
                     <div class="text-xs opacity-60 flex items-center gap-1 mt-1">
                       <lucide-icon [img]="Calendar" class="w-3 h-3"></lucide-icon>
-                      {{ getDate(trip.tripDate)   | date:'mediumDate' }}
+                      {{ getDate(trip.tripDate) | date:'mediumDate' }}
                     </div>
                   </div>
 
@@ -89,48 +118,44 @@
                     <button
                       (click)="this.selectedTripId.set(trip.id!)"
                       class="btn btn-xs btn-ghost text-error"
-                      onclick="delete_trip_modal.showModal()"
-                    >
+                      onclick="delete_trip_modal.showModal()">
                       <lucide-icon [img]="Trash" class="w-3.5 h-3.5"></lucide-icon>
                     </button>
                   }
-
                 </div>
 
                 <!-- MEMBERS -->
                 <div class="flex items-center gap-2 text-sm">
                   <lucide-icon [img]="Users" class="w-4 h-4 text-info"></lucide-icon>
                   <span class="opacity-70">Members</span>
-                  <span (click)="openMembersModal(trip?.id)" class="font-medium">{{ trip.members.length }}</span>
+                  <span
+                    (click)="openMembersModal(trip?.id)"
+                    class="font-medium cursor-pointer hover:text-primary transition">
+                    {{ trip.members.length }}
+                  </span>
                 </div>
-
 
                 <!-- SHARE CODE -->
                 <div class="flex items-center gap-2 text-sm opacity-60">
                   <lucide-icon [img]="Hash" class="w-4 h-4"></lucide-icon>
                   <span class="text-xs font-mono">{{ trip.shareCode }}</span>
-
-                  <!-- Copy Button -->
                   <button
                     (click)="shareCodeCopyToClipboard(trip.shareCode)"
                     [title]="'Copy share code'"
-                    class="btn btn-xs btn-ghost gap-1"
-                  >
+                    class="btn btn-xs btn-ghost gap-1">
                     @if (shareCodeCopied() != null && trip.shareCode == this.shareCodeCopied()) {
                       <lucide-icon [img]="Check" class="w-3 h-3 text-success"></lucide-icon>
                     } @else {
                       <lucide-icon [img]="Copy" class="w-3 h-3"></lucide-icon>
                     }
                   </button>
-
                 </div>
 
                 <!-- ACTION -->
                 <div class="pt-2">
                   <button
                     (click)="openTrip(trip.id)"
-                    class="btn btn-primary btn-sm w-full gap-2"
-                  >
+                    class="btn btn-primary btn-sm w-full gap-2">
                     <lucide-icon [img]="ArrowRight" class="w-4 h-4"></lucide-icon>
                     Open Trip
                   </button>
@@ -147,26 +172,16 @@
 
         <!-- EMPTY STATE -->
         <div class="col-span-full text-center py-20 opacity-60">
-
-          <lucide-icon
-            [img]="Plane"
-            class="w-14 h-14 mx-auto mb-4 text-base-content/40">
+          <lucide-icon [img]="Plane" class="w-14 h-14 mx-auto mb-4 text-base-content/40">
           </lucide-icon>
-
           <p class="text-lg font-medium">No Trips Yet</p>
-
-          <p class="text-sm mt-1">
-            Create your first trip and start tracking expenses!
-          </p>
-
+          <p class="text-sm mt-1">Create your first trip and start tracking expenses!</p>
           <button
             class="btn btn-primary btn-sm mt-6 gap-2"
-            onclick="create_trip_modal.showModal()"
-          >
+            onclick="create_trip_modal.showModal()">
             <lucide-icon [img]="Plus" class="w-4 h-4"></lucide-icon>
             Create Trip
           </button>
-
         </div>
 
       }
@@ -176,7 +191,7 @@
   </div>
 </div>
 
-<!--ADD NEW TRIP MODAL-->
+<!-- ADD NEW TRIP MODAL -->
 <dialog class="modal" id="create_trip_modal">
   <div class="modal-box w-full max-w-xl">
 
@@ -187,7 +202,6 @@
 
     <form [formGroup]="tripForm" class="space-y-4">
 
-      <!-- Name -->
       <div class="space-y-1">
         <input
           [class.input-error]="tripForm.get('name')?.invalid && tripForm.get('name')?.touched"
@@ -210,7 +224,6 @@
         }
       </div>
 
-      <!-- Date -->
       <div class="space-y-1">
         <input
           [class.input-error]="tripForm.get('date')?.invalid && tripForm.get('date')?.touched"
@@ -235,8 +248,7 @@
       <button
         (click)="createTrip()"
         [disabled]="tripForm.invalid"
-        class="btn btn-primary gap-2"
-      >
+        class="btn btn-primary gap-2">
         <lucide-icon [img]="Plus" class="w-4 h-4"></lucide-icon>
         Create
       </button>
@@ -255,7 +267,6 @@
     </h3>
 
     <div class="space-y-4">
-
       <input
         (input)="joinCode = $any($event.target).value.toUpperCase()"
         [(ngModel)]="joinCode"
@@ -263,7 +274,6 @@
         placeholder="Enter trip code"
         type="text"
       />
-
     </div>
 
     <div class="modal-action">
@@ -279,51 +289,80 @@
   </div>
 </dialog>
 
-
 <!-- LOGOUT MODAL -->
 <dialog class="modal" id="logout_modal">
   <div class="modal-box">
-
-    <h3 class="font-semibold text-lg mb-4">
-      Are you sure you want to logout?
-    </h3>
-
+    <h3 class="font-semibold text-lg mb-4">Are you sure you want to logout?</h3>
     <div class="modal-action">
       <form method="dialog">
         <button class="btn">No</button>
       </form>
-      <button (click)="logout()" class="btn btn-primary">
-        Yes
-      </button>
+      <button (click)="logout()" class="btn btn-primary">Yes</button>
     </div>
-
   </div>
 </dialog>
-
 
 <!-- DELETE TRIP MODAL -->
 <dialog class="modal" id="delete_trip_modal">
   <div class="modal-box">
-
-    <h3 class="font-semibold text-lg mb-4">
-      Are you sure you want to delete?
-    </h3>
-
+    <h3 class="font-semibold text-lg mb-4">Are you sure you want to delete?</h3>
     <div class="modal-action">
       <form method="dialog">
         <button class="btn">No</button>
       </form>
-      <button (click)="deleteTrip()" class="btn btn-error">
-        Yes, Delete
-      </button>
+      <button (click)="deleteTrip()" class="btn btn-error">Yes, Delete</button>
     </div>
-
   </div>
 </dialog>
 
-
+<!-- MEMBERS MODAL -->
 <app-user-list
   #membersModal
   [currentUser]="this.currentUser()"
   [tripId]="this.userListSelectedTripId()"
 ></app-user-list>
+
+<!-- UPI ID MODAL -->
+@if (showUpiModal()) {
+  <dialog class="modal modal-open">
+    <div class="modal-box max-w-sm">
+
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-semibold text-lg flex items-center gap-2">
+          <lucide-icon [img]="Wallet" class="w-5 h-5 text-primary"></lucide-icon>
+          Your UPI ID
+        </h3>
+        <button
+          (click)="showUpiModal.set(false)"
+          class="btn btn-ghost btn-sm btn-circle">
+          <lucide-icon [img]="X" class="w-4 h-4"></lucide-icon>
+        </button>
+      </div>
+
+      @if (currentUser().upiId) {
+        <div class="bg-base-200 rounded-box p-3 flex items-center justify-between mb-4">
+          <span class="font-mono text-sm">{{ currentUser().upiId }}</span>
+          <span class="text-xs text-success flex items-center gap-1">
+            <lucide-icon [img]="Check" class="w-3 h-3"></lucide-icon>
+            Active
+          </span>
+        </div>
+      } @else {
+        <div class="bg-warning/10 border border-warning/20 rounded-box p-3 mb-4">
+          <p class="text-xs text-warning font-medium">No UPI ID added yet</p>
+          <p class="text-xs text-base-content/50 mt-0.5">
+            Others can't pay you directly without this
+          </p>
+        </div>
+      }
+
+      <app-upi-id-settings
+        (removed)="onUpiRemoved()"
+        (saved)="onUpiSaved($event)"
+        [currentUser]="currentUser()"
+      />
+
+    </div>
+    <div (click)="showUpiModal.set(false)" class="modal-backdrop"></div>
+  </dialog>
+}
