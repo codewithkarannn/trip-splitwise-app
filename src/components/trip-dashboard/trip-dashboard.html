@@ -385,7 +385,7 @@
 
               <div class="flex items-center gap-2">
 
-                @if (expense.paidBy !== currentUser()?.uid) {
+                @if (expense.paidBy != currentUser()?.uid) {
                   <button (click)="openUpiPayment(expense)" class="btn btn-xs btn-primary rounded-md">
                     Pay now
                   </button>
