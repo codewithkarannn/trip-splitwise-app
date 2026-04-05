@@ -46,15 +46,12 @@
 
         <div class="divider my-1"></div>
 
-        <!-- UPI ID row with copy -->
+        <!-- UPI ID + copy -->
         <div class="flex justify-between items-center text-sm">
           <span class="text-base-content/50">UPI ID</span>
           <div class="flex items-center gap-2">
             <span class="font-mono text-sm font-medium">{{ payer().upiId }}</span>
-            <button
-              (click)="copyUpiId()"
-              [title]="'Copy UPI ID'"
-              class="btn btn-xs btn-ghost gap-1">
+            <button (click)="copyUpiId()" class="btn btn-xs btn-ghost gap-1">
               @if (copied()) {
                 <lucide-icon [img]="Check" class="w-3 h-3 text-success"></lucide-icon>
               } @else {
@@ -66,24 +63,21 @@
 
       </div>
 
-      <!-- Platform-specific CTA -->
+      <!-- ── ANDROID ──────────────────────────────────────────────────────
+           upi:// deep link opens system app chooser — no individual
+           app buttons needed, Android handles the selection itself.
+      ───────────────────────────────────────────────────────────────────── -->
       @if (platform() === 'android') {
 
-        <div class="grid grid-cols-2 gap-3 mb-4">
+        <button (click)="pay()" class="btn btn-primary w-full gap-2 mb-2">
+          <lucide-icon [img]="Smartphone" class="w-4 h-4"></lucide-icon>
+          Open UPI App
+        </button>
 
-          @for (app of upiApps; track app.name) {
-            <button
-              (click)="openUpiApp(app)"
-              class="flex items-center gap-2 border rounded-lg p-2 hover:bg-base-200 transition">
+        <p class="text-xs text-center text-base-content/40 mb-3">
+          Your phone will show GPay, PhonePe, Paytm etc. to choose from
+        </p>
 
-              <img [src]="app.icon" class="w-6 h-6"/>
-              <span class="text-sm font-medium">{{ app.name }}</span>
-            </button>
-          }
-
-        </div>
-
-        <!-- Copy Button -->
         <button (click)="copyUpiId()" class="btn btn-outline w-full gap-2 mb-2">
           @if (copied()) {
             <lucide-icon [img]="Check" class="w-4 h-4 text-success"></lucide-icon>
@@ -94,28 +88,47 @@
           }
         </button>
 
-        <!-- Confirm -->
-        <button (click)="confirmPayment()" class="btn btn-primary w-full">
+        <button (click)="confirmPayment()" class="btn btn-ghost btn-sm w-full">
           I've Paid — Mark as Done
         </button>
 
-      } @else if (platform() === 'ios') {
+      } @else if (platform() === 'desktop') {
 
-        <div class="grid grid-cols-2 gap-3 mb-4">
+        <p class="text-xs text-base-content/40 mb-3">
+          Choose your UPI app to open directly:
+        </p>
+
+        <div class="grid grid-cols-2 gap-2 mb-4">
 
           @for (app of upiApps; track app.name) {
             <button
               (click)="openUpiApp(app)"
-              class="flex items-center gap-2 border rounded-lg p-2 hover:bg-base-200 transition">
+              class="flex items-center gap-2 border border-base-300 rounded-lg
+             p-2.5 hover:bg-base-200 transition">
 
-              <img [src]="app.icon" class="w-6 h-6"/>
+              @if (app.icon) {
+                <img
+                  (error)="app.icon = ''"
+                  [alt]="app.name"
+                  [src]="app.icon"
+                  class="w-7 h-7 object-contain flex-shrink-0"
+                />
+              } @else {
+                <div
+                  [style.background]="app.color"
+                  class="w-7 h-7 rounded-md flex items-center justify-center
+                 text-white text-[11px] font-bold flex-shrink-0">
+                  {{ app.letter }}
+                </div>
+              }
+
               <span class="text-sm font-medium">{{ app.name }}</span>
+
             </button>
           }
 
         </div>
 
-        <!-- Copy Button -->
         <button (click)="copyUpiId()" class="btn btn-outline w-full gap-2 mb-2">
           @if (copied()) {
             <lucide-icon [img]="Check" class="w-4 h-4 text-success"></lucide-icon>
@@ -126,14 +139,12 @@
           }
         </button>
 
-        <!-- Confirm -->
         <button (click)="confirmPayment()" class="btn btn-primary w-full">
           I've Paid — Mark as Done
         </button>
 
       } @else {
 
-        <!-- Desktop -->
         <div class="text-center text-sm text-base-content/50 mb-4">
           Open your UPI app on your phone and pay to the UPI ID above.
         </div>

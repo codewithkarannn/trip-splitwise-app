@@ -5,67 +5,73 @@ import {UpiService} from '../../services/upi-service';
 import {UpiPaymentDetails} from '../../models/upi-payment-details';
 import {Check, Copy, LucideAngularModule, Smartphone, X} from 'lucide-angular';
 
-
 @Component({
   selector: 'app-upi-payment',
-  imports: [
-    LucideAngularModule
-  ],
+  imports: [LucideAngularModule],
   templateUrl: './upi-payment.html',
   styleUrl: './upi-payment.css',
 })
 export class UpiPayment {
 
   expense = input.required<Expense>();
-  payer = input.required<AppUser>();
+  payer   = input.required<AppUser>();
 
-  paidConfirmed = output<Expense>();   // emitted when user confirms payment
+  paidConfirmed = output<Expense>();
   cancelled     = output<void>();
 
   copied   = signal(false);
   platform = signal<'android' | 'ios' | 'desktop'>('desktop');
+
+  /**
+   * iOS only — app buttons with letter avatar fallback.
+   * Android uses the generic upi:// deep link — no app buttons needed.
+   */
   upiApps = [
     {
       name: 'Google Pay',
-      icon: 'assets/googlepay.svg',
+      color: '#4285F4',
+      letter: 'G',
+      icon: 'https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg',
       scheme: 'gpay://upi/pay'
     },
     {
       name: 'PhonePe',
-      icon: 'assets/phonepe.png',
+      color: '#5f259f',
+      letter: 'Pe',
+      icon: 'https://upload.wikimedia.org/wikipedia/commons/7/71/PhonePe_Logo.svg',
       scheme: 'phonepe://pay'
     },
     {
       name: 'Paytm',
-      icon: 'assets/paytm.png',
+      color: '#00BAF2',
+      letter: 'Pt',
+      icon: 'https://upload.wikimedia.org/wikipedia/commons/4/42/Paytm_logo.png',
       scheme: 'paytmmp://pay'
     },
     {
       name: 'BHIM',
-      icon: 'assets/bhim.png',
+      color: '#004C8F',
+      letter: 'B',
+      icon: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/UPI_logo.svg', // UPI logo as fallback
       scheme: 'bhim://upi/pay'
     }
   ];
   protected readonly Smartphone = Smartphone;
-  protected readonly X = X;
-  protected readonly Check = Check;
-  protected readonly Copy = Copy;
+  protected readonly X          = X;
+  protected readonly Check      = Check;
+  protected readonly Copy       = Copy;
+
   private upiService = inject(UpiService);
 
-constructor() {
-  if(this.upiService.isAndroid())
-  {
-    this.platform.set('android');
+  constructor() {
+    if (this.upiService.isAndroid()) {
+      this.platform.set('android');
+    } else if (this.upiService.isIos()) {
+      this.platform.set('ios');
+    } else {
+      this.platform.set('desktop');
+    }
   }
-  else if(this.upiService.isIos())
-  {
-    this.platform.set('ios');
-  }
-  else
-  {
-    this.platform.set('desktop');
-  }
-}
 
   get details(): UpiPaymentDetails {
     return this.upiService.buildPaymentDetails(this.expense(), this.payer());
@@ -75,16 +81,31 @@ constructor() {
     return !!this.payer()?.upiId;
   }
 
-  /** Called when user taps the main Pay button */
+  /**
+   * Android: fires generic upi:// deep link → system shows app chooser (GPay/PhonePe etc.)
+   * No need for individual app buttons on Android.
+   */
   pay() {
     if (!this.hasUpiId) return;
+    this.upiService.openAndroidUpi(this.details);
+    setTimeout(() => this.confirmDialog(), 3000);
+  }
 
-    if (this.platform() === 'android') {
-      this.upiService.openAndroidUpi(this.details);
-      // After 3s ask if they completed payment
-      setTimeout(() => this.confirmDialog(), 3000);
-    }
-    // iOS and desktop — modal stays open showing copy UI
+  /**
+   * iOS only: each app has its own URL scheme since upi:// isn't supported.
+   */
+  openUpiApp(app: { name: string; scheme: string }) {
+    const d   = this.details;
+    const url = `${app.scheme}?pa=${this.payer().upiId}`
+      + `&pn=${encodeURIComponent(this.payer().name ?? '')}`
+      + `&am=${d.amount}`
+      + `&tn=${encodeURIComponent(d.note)}`;
+
+    window.location.href = url;
+
+    setTimeout(() => {
+      alert(`If ${app.name} did not open, try another app or copy the UPI ID.`);
+    }, 2500);
   }
 
   copyUpiId() {
@@ -100,19 +121,6 @@ constructor() {
 
   cancel() {
     this.cancelled.emit();
-  }
-
-  openUpiApp(app: any) {
-    const d = this.details;
-
-    const url = `${app.scheme}?pa=${this.payer().upiId}&pn=${this.payer().name}&am=${d.amount}&tn=${d.note}`;
-
-    window.location.href = url;
-
-    // fallback if app not installed
-    setTimeout(() => {
-      alert('If app did not open, please use Copy UPI ID');
-    }, 2000);
   }
 
   private confirmDialog() {
