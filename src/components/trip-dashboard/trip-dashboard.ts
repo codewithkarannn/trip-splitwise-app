@@ -12,7 +12,6 @@ import {
   ArrowUpDown,
   Calendar,
   Filter,
-  IndianRupee,
   LucideAngularModule,
   Pencil,
   Plus,
@@ -20,8 +19,6 @@ import {
   Search,
   SortAsc,
   SortDesc,
-  StickyNote,
-  User,
   Users,
   X
 } from 'lucide-angular';
@@ -56,12 +53,14 @@ export class TripDashboard implements OnInit {
   totalExpense = signal<number>(0);
   connectedUserDetails = signal<AppUser[]>([]);
   selectedExpenseId = signal<string | null>(null);
-  transactionSplitMembers =  signal<AppUser[]>([]);
+  transactionSplitMembers = signal<{ user: AppUser; hasPaid: boolean; isPayer: boolean }[]>([]);
+  activeTransactionExpense = signal<Expense | null>(null);
   filterDateFrom = signal<string>('');
   filterDateTo = signal<string>('');
   filterPaidBy = signal<string>('');
   filterMinAmount = signal<number | null>(null);
   filterMaxAmount = signal<number | null>(null);
+  filterPaymentStatus = signal<'all' | 'paid' | 'unpaid'>('all');
   filterSplitMember = signal<string>('');
   showFilters = signal<boolean>(false);
   sortBy = signal<'date' | 'amount' | 'title'>('date');
@@ -81,8 +80,6 @@ export class TripDashboard implements OnInit {
   protected readonly Users = Users;
   protected readonly Calendar = Calendar;
   protected readonly Plus = Plus;
-  protected readonly IndianRupee = IndianRupee;
-  protected readonly StickyNote = StickyNote;
   protected readonly Search = Search;
   protected readonly SortAsc = SortAsc;
   protected readonly SortDesc = SortDesc;
@@ -92,7 +89,6 @@ export class TripDashboard implements OnInit {
   protected readonly AlertCircle = AlertCircle;
   protected readonly Pencil = Pencil;
   protected readonly ArrowLeft = ArrowLeft;
-  protected readonly User = User;
   private fb = inject(FormBuilder);
 
   constructor() {
@@ -125,6 +121,7 @@ export class TripDashboard implements OnInit {
     this.filterMinAmount.set(null);
     this.filterMaxAmount.set(null);
     this.filterSplitMember.set('');
+    this.filterPaymentStatus.set('all');
   }
 
   openEditDialog(expense: Expense) {
@@ -148,7 +145,8 @@ export class TripDashboard implements OnInit {
   hasActiveFilters() {
     return this.filterDateFrom() || this.filterDateTo() ||
       this.filterPaidBy() || this.filterMinAmount() !== null ||
-      this.filterMaxAmount() !== null || this.filterSplitMember();
+      this.filterMaxAmount() !== null || this.filterSplitMember() ||
+      this.filterPaymentStatus() !== 'all';
   }
 
   filteredExpenses() {
@@ -176,10 +174,16 @@ export class TripDashboard implements OnInit {
       if (this.filterMinAmount() !== null && e.amount < this.filterMinAmount()!) return false;
       if (this.filterMaxAmount() !== null && e.amount > this.filterMaxAmount()!) return false;
 
-      // Split member
-      if (this.filterSplitMember() && !e.members?.includes(this.filterSplitMember())) return false;
+      if (this.filterPaymentStatus() !== 'all') {
+        const paid = this.hasUserPaid(e);
+        if (this.filterPaymentStatus() === 'paid'   && !paid) return false;
+        if (this.filterPaymentStatus() === 'unpaid' &&  paid) return false;
+      }
 
-      return true;
+      // Split member
+      return !(this.filterSplitMember() && !e.members?.includes(this.filterSplitMember()));
+
+
     });
 
     return results.sort((a, b) => {
@@ -296,6 +300,10 @@ export class TripDashboard implements OnInit {
       selectedMembers = [...selectedMembers, payer];
     }
 
+    const settlements = selectedMembers.map((uid : string) => ({
+      userId: uid,
+      paid: uid === payer
+    }));
     const expenseData = {
       title: this.expenseForm.value.title,
       amount: this.expenseForm.value.amount,
@@ -304,6 +312,7 @@ export class TripDashboard implements OnInit {
       members: selectedMembers,
       tripId: this.tripDetails().id!,
       paidBy: payer,
+      ...(this.isEditMode() ? {} : { settlements })
     };
     if (this.isEditMode()) {
       await this.expenseService.updateExpense(
@@ -314,6 +323,7 @@ export class TripDashboard implements OnInit {
     } else {
       await this.expenseService.addExpense({
         ...expenseData,
+        settlements,
         createdAt: new Date()
       });
     }
@@ -321,6 +331,42 @@ export class TripDashboard implements OnInit {
     this.closeExpenseModal();
   }
 
+
+  hasUserPaid(expense: Expense): boolean {
+    const uid = this.currentUser()?.uid;
+    if (!uid) return false;
+
+    // Payer is always paid
+    if (expense.paidBy === uid) return true;
+
+    // If no settlements field yet, treat as unpaid
+    if (!expense.settlements?.length) return false;
+
+    return expense.settlements.find(s => s.userId === uid)?.paid ?? false;
+  }
+
+  markAsPaid(expense: Expense) {
+    const uid = this.currentUser()?.uid;
+    if (!uid) return;
+
+    // Build settlements from members if missing (old expenses won't have it)
+    const existing = expense.settlements?.length
+      ? expense.settlements
+      : expense.members.map(memberId => ({
+        userId: memberId,
+        paid: memberId === expense.paidBy  // payer is already paid
+      }));
+
+    const updatedSettlements = existing.map(s =>
+      s.userId === uid ? { ...s, paid: true } : s
+    );
+
+    this.expenseService.updateExpense(
+      expense.tripId,
+      expense.id!,
+      { settlements: updatedSettlements }
+    );
+  }
   closeExpenseModal() {
     this.isEditMode.set(false);
     this.editingExpenseId.set(null);
@@ -437,30 +483,32 @@ export class TripDashboard implements OnInit {
 
   }
 
-  protected openTransactionSplit(memberIds: string[]) {
+  protected openTransactionSplit(expense: Expense) {
+    this.activeTransactionExpense.set(expense);
+
+    const sorted = expense.members
+      .map(id => this.getUser(id))
+      .filter(Boolean) as AppUser[];
+
+    sorted.sort((a, b) => (a?.name ?? '').localeCompare(b?.name ?? ''));
+
+    this.transactionSplitMembers.set(
+      sorted.map(user => ({
+        user,
+        isPayer: user.uid === expense.paidBy,
+        hasPaid: this.hasUserPaid({ ...expense, members: [user.uid] })
+          || user.uid === expense.paidBy
+          || (expense.settlements?.find(s => s.userId === user.uid)?.paid ?? false)
+      }))
+    );
+
     const modal = document.getElementById('transaction_members_modal') as HTMLDialogElement;
     modal?.showModal();
-
-    for(const id of memberIds) {
-      const user = this.getUser(id);
-
-      if(user)
-      {
-        this.transactionSplitMembers.update(list => [...list, user]);
-      }
-
-    }
-    this.transactionSplitMembers.update(list =>
-      [...list].sort((a, b) =>
-        (a?.name ?? '').localeCompare(b?.name ?? '')
-      )
-    );
   }
-
   protected onCloseTransactionSplitMembersModal() {
     const modal = document.getElementById('transaction_members_modal') as HTMLDialogElement;
     modal?.close();
-
     this.transactionSplitMembers.set([]);
+    this.activeTransactionExpense.set(null);
   }
 }

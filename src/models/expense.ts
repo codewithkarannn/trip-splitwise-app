@@ -8,4 +8,12 @@ export interface Expense {
   members : string[];
   notes? : string;
   createdAt: any;
+
+  settlements?: Settlement[];
+
+}
+
+export interface Settlement {
+  userId: string;
+  paid: boolean;
 }
