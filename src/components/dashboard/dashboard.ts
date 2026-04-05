@@ -26,10 +26,11 @@ import {filter, switchMap, take} from 'rxjs';
 import {ThemeSwitcher} from '../theme-switcher/theme-switcher';
 import {AppUser} from '../../models/app-user';
 import {UserList} from '../shared/user-list/user-list';
+import {UpiIdSettings} from '../upi-id-settings/upi-id-settings';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [FormsModule, LucideAngularModule, DatePipe, ThemeSwitcher, ReactiveFormsModule, UserList],
+  imports: [FormsModule, LucideAngularModule, DatePipe, ThemeSwitcher, ReactiveFormsModule, UserList, UpiIdSettings],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
@@ -47,7 +48,7 @@ export class Dashboard implements OnInit {
   myTrips = signal<Trip[]>([]);
   shareCodeCopied = signal<string | null>(null);
   currentUser = signal<AppUser>({} as AppUser);
-  userListSelectedTripId = signal<string >('');
+  userListSelectedTripId = signal<string>('');
   @ViewChild('membersModal') membersModal!: UserList;
   protected readonly Plane = Plane;
   protected readonly Plus = Plus;
@@ -66,7 +67,7 @@ export class Dashboard implements OnInit {
   private fb = inject(FormBuilder);
   tripForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(3)]],
-    date: [new Date() , Validators.required]
+    date: [new Date(), Validators.required]
   });
 
   get today(): Date {
@@ -74,7 +75,7 @@ export class Dashboard implements OnInit {
   }
 
   ngOnInit() {
-    toObservable(this.authService._user, { injector: this.injector }).pipe(
+    toObservable(this.authService._user, {injector: this.injector}).pipe(
       filter(user => !!user),
       take(1),
       switchMap(user => {
@@ -93,7 +94,7 @@ export class Dashboard implements OnInit {
       return;
     }
 
-    const { name, date } = this.tripForm.value;
+    const {name, date} = this.tripForm.value;
     await this.tripService.createTrip(name, new Date(date));
 
     this.tripForm.reset({
@@ -106,7 +107,7 @@ export class Dashboard implements OnInit {
   }
 
   openTrip(tripId?: string) {
-    this.router.navigate(['/trip'], { queryParams: { id: tripId } });
+    this.router.navigate(['/trip'], {queryParams: {id: tripId}});
   }
 
   closeJoinModal() {
@@ -158,17 +159,26 @@ export class Dashboard implements OnInit {
     modal?.close();
   }
 
-  async openMembersModal( tripId? : string ) {
-    const _tripId = tripId ;
-    if(_tripId){
-    console.log('_tripId', _tripId);
-    this.userListSelectedTripId.set(_tripId);
-    this.membersModal.open();
+  async openMembersModal(tripId?: string) {
+    const _tripId = tripId;
+    if (_tripId) {
+      console.log('_tripId', _tripId);
+      this.userListSelectedTripId.set(_tripId);
+      this.membersModal.open();
     }
   }
+
+  onUpiSaved(upiId: string) {
+    this.currentUser.update(user => ({
+      ...user!,
+      upiId
+    }));
+  }
+
   protected cancelJoinTrip() {
     const modal = document.getElementById('join_trip_modal') as HTMLDialogElement;
     modal?.close();
     this.joinCode = null;
   }
+
 }

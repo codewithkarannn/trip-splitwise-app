@@ -27,6 +27,7 @@ import {AppUser} from '../../models/app-user';
 import {toObservable} from '@angular/core/rxjs-interop';
 import {filter, take} from 'rxjs';
 import {TripSettlements} from '../trip-settlements/trip-settlements';
+import {UpiPayment} from '../upi-payment/upi-payment';
 
 @Component({
   selector: 'app-trip-dashboard',
@@ -37,6 +38,7 @@ import {TripSettlements} from '../trip-settlements/trip-settlements';
     LucideAngularModule,
     ReactiveFormsModule,
     DecimalPipe,
+    UpiPayment,
 
   ],
   templateUrl: './trip-dashboard.html',
@@ -65,6 +67,11 @@ export class TripDashboard implements OnInit {
   showFilters = signal<boolean>(false);
   sortBy = signal<'date' | 'amount' | 'title'>('date');
   sortDir = signal<'asc' | 'desc'>('desc');
+
+  showUpiModal   = signal(false);
+  upiExpense     = signal<Expense | null>(null);
+  upiPayer       = signal<AppUser | null>(null);
+
   sortFields: { label: string; value: 'date' | 'amount' | 'title' }[] = [
     { label: 'Date', value: 'date' },
     { label: 'Amount', value: 'amount' },
@@ -140,6 +147,18 @@ export class TripDashboard implements OnInit {
 
     const modal = document.getElementById('create_expense_modal') as HTMLDialogElement;
     modal?.showModal();
+  }
+
+  openUpiPayment(expense: Expense) {
+    const payer = this.getUser(expense.paidBy);
+    if (!payer) return;
+    this.upiExpense.set(expense);
+    this.upiPayer.set(payer);
+    this.showUpiModal.set(true);
+  }
+  onUpiPaid(expense: Expense) {
+    this.markAsPaid(expense);
+    this.showUpiModal.set(false);
   }
 
   hasActiveFilters() {
