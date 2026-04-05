@@ -53,7 +53,7 @@ export class UpiPayment {
       color: '#004C8F',
       letter: 'B',
       icon: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/UPI_logo.svg', // UPI logo as fallback
-      scheme: 'bhim://upi/pay'
+      scheme: 'bhim://pay'
     }
   ];
   protected readonly Smartphone = Smartphone;
@@ -99,6 +99,7 @@ export class UpiPayment {
     const url = `${app.scheme}?pa=${this.payer().upiId}`
       + `&pn=${encodeURIComponent(this.payer().name ?? '')}`
       + `&am=${d.amount}`
+      + `&cu=INR`
       + `&tn=${encodeURIComponent(d.note)}`;
 
     window.location.href = url;

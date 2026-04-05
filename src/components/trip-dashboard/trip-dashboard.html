@@ -385,19 +385,11 @@
 
               <div class="flex items-center gap-2">
 
-                @if (expense.paidBy != currentUser()?.uid) {
+                @if (expense.paidBy != currentUser()?.uid && !hasUserPaid(expense)) {
                   <button (click)="openUpiPayment(expense)" class="btn btn-xs btn-primary rounded-md">
                     Pay now
                   </button>
 
-                  @if (showUpiModal() && upiExpense() && upiPayer()) {
-                    <app-upi-payment
-                      (cancelled)="showUpiModal.set(false)"
-                      (paidConfirmed)="onUpiPaid($event)"
-                      [expense]="upiExpense()!"
-                      [payer]="upiPayer()!"
-                    />
-                  }
 
                 }
                 @if (expense.paidBy === currentUser()?.uid) {
@@ -809,3 +801,12 @@
 
   </div>
 </dialog>
+
+@if (showUpiModal() && upiExpense() && upiPayer()) {
+  <app-upi-payment
+    (cancelled)="showUpiModal.set(false)"
+    (paidConfirmed)="onUpiPaid($event)"
+    [expense]="upiExpense()!"
+    [payer]="upiPayer()!"
+  />
+}

@@ -13,17 +13,17 @@
     </div>
 
     @if (!hasUpiId) {
-
-      <!-- No UPI ID state -->
-      <div class="text-center py-6 space-y-2">
+      <div class="text-center py-6 space-y-3">
         <p class="text-base-content/60 text-sm">
           {{ payer().name }} hasn't added their UPI ID yet.
         </p>
         <p class="text-base-content/40 text-xs">
-          Ask them to add it from their profile settings.
+          Pay them directly and mark below.
         </p>
+        <button (click)="confirmPayment()" class="btn btn-primary w-full mt-2">
+          Mark as Paid
+        </button>
       </div>
-
     } @else {
 
       <!-- Payment summary card -->
