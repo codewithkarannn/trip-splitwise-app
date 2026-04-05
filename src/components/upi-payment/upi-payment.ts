@@ -57,7 +57,7 @@ constructor() {
   {
     this.platform.set('android');
   }
-  else if(this.upiService.isAndroid())
+  else if(this.upiService.isIos())
   {
     this.platform.set('ios');
   }
