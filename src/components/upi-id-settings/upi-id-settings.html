@@ -1,0 +1,142 @@
+<div class="bg-base-100 border border-base-200 rounded-box p-4">
+
+  <div class="flex items-center justify-between mb-3">
+    <div>
+      <p class="text-sm font-medium">UPI ID</p>
+      <p class="text-xs text-base-content/40 mt-0.5">So others can pay you directly</p>
+    </div>
+
+    <!-- Edit + Remove buttons — only in display mode when UPI exists -->
+    @if (!isEditing() && !isRemoving() && currentUser().upiId) {
+      <div class="flex gap-1">
+        <button (click)="startEdit()" class="btn btn-ghost btn-xs gap-1">
+          <lucide-icon [img]="Pencil" class="w-3 h-3"></lucide-icon>
+          Edit
+        </button>
+        <button (click)="confirmRemove()" class="btn btn-ghost btn-xs text-error gap-1">
+          <lucide-icon [img]="Trash" class="w-3 h-3"></lucide-icon>
+          Remove
+        </button>
+      </div>
+    }
+
+    <!-- Add button — only when no UPI and not editing -->
+    @if (!isEditing() && !isRemoving() && !currentUser().upiId) {
+      <button (click)="startEdit()" class="btn btn-ghost btn-xs gap-1">
+        <lucide-icon [img]="Pencil" class="w-3 h-3"></lucide-icon>
+        Add
+      </button>
+    }
+
+  </div>
+
+  <!-- ── DISPLAY MODE ───────────────────────────────────────────────────── -->
+  @if (!isEditing() && !isRemoving()) {
+    @if (currentUser().upiId) {
+      <div class="flex items-center gap-2">
+        <span class="font-mono text-sm bg-base-200 px-3 py-1.5 rounded-md flex-1">
+          {{ currentUser().upiId }}
+        </span>
+        @if (saveSuccess()) {
+          <span class="text-xs text-success flex items-center gap-1">
+            <lucide-icon [img]="Check" class="w-3 h-3"></lucide-icon>
+            Saved
+          </span>
+        }
+      </div>
+    } @else {
+      <p class="text-xs text-base-content/40 italic">No UPI ID added yet</p>
+    }
+  }
+
+  <!-- ── EDIT MODE ──────────────────────────────────────────────────────── -->
+  @if (isEditing()) {
+    <div class="space-y-2">
+
+      <input
+        (ngModelChange)="saveError.set('')"
+        [(ngModel)]="upiId"
+        [class.input-error]="saveError()"
+        autocapitalize="none"
+        autocomplete="off"
+        autocorrect="off"
+        class="input input-bordered input-sm w-full font-mono"
+        placeholder="yourname@okaxis"
+        type="text"
+      />
+
+      <!-- Quick handle suggestions -->
+      <div class="flex flex-wrap gap-1">
+        @for (handle of ['@okaxis', '@oksbi', '@okicici', '@ybl', '@paytm']; track handle) {
+          <button
+            (click)="upiId.set(upiId().split('@')[0] + handle)"
+            class="badge badge-outline badge-sm cursor-pointer hover:badge-primary transition">
+            {{ handle }}
+          </button>
+        }
+      </div>
+
+      @if (saveError()) {
+        <p class="text-error text-xs flex items-center gap-1">
+          <lucide-icon [img]="AlertCircle" class="w-3 h-3"></lucide-icon>
+          {{ saveError() }}
+        </p>
+      }
+
+      <div class="flex gap-2 pt-1">
+        <button (click)="cancelEdit()" class="btn btn-ghost btn-sm flex-1">
+          Cancel
+        </button>
+        <button
+          (click)="save()"
+          [disabled]="isSaving() || !isValid"
+          class="btn btn-primary btn-sm flex-1 gap-1">
+          @if (isSaving()) {
+            <span class="loading loading-spinner loading-xs"></span>
+          } @else {
+            <lucide-icon [img]="Check" class="w-3.5 h-3.5"></lucide-icon>
+          }
+          Save
+        </button>
+      </div>
+
+    </div>
+  }
+
+  <!-- ── REMOVE CONFIRM MODE ───────────────────────────────────────────── -->
+  @if (isRemoving()) {
+    <div class="bg-error/10 border border-error/20 rounded-box p-3 space-y-3">
+
+      <p class="text-sm text-error font-medium">Remove UPI ID?</p>
+      <p class="text-xs text-base-content/50">
+        Others won't be able to pay you directly until you add it again.
+      </p>
+
+      @if (saveError()) {
+        <p class="text-error text-xs flex items-center gap-1">
+          <lucide-icon [img]="AlertCircle" class="w-3 h-3"></lucide-icon>
+          {{ saveError() }}
+        </p>
+      }
+
+      <div class="flex gap-2">
+        <button (click)="cancelRemove()" class="btn btn-ghost btn-sm flex-1">
+          Cancel
+        </button>
+        <button
+          (click)="remove()"
+          [disabled]="isSaving()"
+          class="btn btn-error btn-sm flex-1 gap-1">
+          @if (isSaving()) {
+            <span class="loading loading-spinner loading-xs"></span>
+          } @else {
+            <lucide-icon [img]="Trash" class="w-3.5 h-3.5"></lucide-icon>
+          }
+          Yes, Remove
+        </button>
+      </div>
+
+    </div>
+  }
+
+</div>

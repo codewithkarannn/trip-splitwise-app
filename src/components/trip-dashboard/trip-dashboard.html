@@ -56,13 +56,6 @@
     <!-- STATS -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
 
-      <!--      <div class="stat bg-base-100 shadow rounded-box">-->
-      <!--        <div class="stat-title text-xs">Expenses</div>-->
-
-      <!--        <div class="stat-value text-primary text-3xl">-->
-      <!--          {{ tripExpenses().length }}-->
-      <!--        </div>-->
-      <!--      </div>-->
 
       <div class="stat bg-base-100 shadow rounded-box">
         <div class="stat-title text-xs">Your Total Trip Expense</div>
@@ -80,6 +73,7 @@
 
     </div>
 
+    <!-- FILTERS AND SORTING-->
     <div class="mb-6 space-y-3">
 
       <!-- Row 1: Search + Sort + Filter Toggle -->
@@ -215,6 +209,26 @@
             </select>
           </div>
 
+          <!-- Payment status-->
+          <div class="space-y-1">
+            <label class="text-xs font-medium opacity-60">Payment Status</label>
+            <div class="flex gap-2">
+              @for (opt of [
+                {label: "All", value: "all"},
+                {label: "Paid", value: "paid"},
+                {label: "Unpaid", value: "unpaid"}
+              ]; track opt.value) {
+                <button
+                  (click)="filterPaymentStatus.set($any(opt.value))"
+                  [class.btn-ghost]="filterPaymentStatus() !== opt.value"
+                  [class.btn-primary]="filterPaymentStatus() === opt.value"
+                  class="btn btn-xs"
+                >
+                  {{ opt.label }}
+                </button>
+              }
+            </div>
+          </div>
           <!-- Clear Filters -->
           <div class="sm:col-span-2 lg:col-span-2 flex items-end">
             <button
@@ -236,195 +250,165 @@
 
       @for (expense of filteredExpenses(); track expense.id) {
         <!--EXPENSE CARD-->
-        <div class="card bg-base-100 border border-base-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition">
+        <div
+          class="card bg-base-100 border border-base-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <div class="card-body p-4 gap-0">
 
-          <div class="card-body p-5 space-y-3">
-
-            <!-- TITLE -->
-            <div class="flex justify-between items-start">
-
+            <!-- TOP: title + amount -->
+            <div class="flex items-start justify-between gap-3 mb-4">
               <div>
-                <h2 class="text-base font-semibold">
-                  {{ expense.title }}
-                </h2>
-
-                <div class="text-xs opacity-60 flex items-center gap-1 mt-1">
+                <h2 class="text-[15px] font-medium leading-snug">{{ expense.title }}</h2>
+                <div class="text-xs text-base-content/50 flex items-center gap-1 mt-1">
                   <lucide-icon [img]="Calendar" class="w-3 h-3"></lucide-icon>
                   {{ expense.date | date:'mediumDate' }}
                 </div>
               </div>
 
-              <div class="text-right space-y-1">
-
-                <div class="text-lg font-bold text-secondary">
-                  <div class="flex flex-col">
-
-                    <span class="font-semibold">
-                      ₹ {{ getUserShare(expense) | number:'1.0-2' }}
-                    </span>
-
-                    @if (!isPersonalExpense(expense.members)) {
-                      <span class="text-xs opacity-60">
-                        (Split from ₹ {{ expense.amount }})
-                      </span>
-                    }
-
-                  </div>
-                </div>
-
-                @if (expense.paidBy == currentUser()?.uid) {
-                  <div class="flex justify-end gap-2">
-
-                    <button
-                      (click)="openEditDialog(expense)"
-                      [disabled]="expense.paidBy !== currentUser()?.uid"
-                      [title]="expense.paidBy !== currentUser()?.uid ? 'Only the payer can edit this expense' : ''"
-                      class="btn btn-xs btn-ghost text-primary"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      (click)="openDeleteDialog(expense.id!, expense.paidBy)"
-                      [disabled]="expense.paidBy !== currentUser()?.uid"
-                      [title]="expense.paidBy !== currentUser()?.uid ? 'Only the payer can delete this expense' : ''"
-                      class="btn btn-xs btn-ghost text-error"
-                    >
-                      Delete
-                    </button>
-
-                  </div>
-
+              <div class="text-right flex-shrink-0">
+                <p class="text-[18px] font-medium leading-tight">
+                  ₹ {{ getUserShare(expense) | number:'1.0-0' }}
+                </p>
+                @if (!isPersonalExpense(expense.members)) {
+                  <p class="text-[11px] text-base-content/40 mt-0.5">
+                    your share of ₹ {{ expense.amount | number:'1.0-0' }}
+                  </p>
                 }
-
               </div>
-
             </div>
 
-            <div class="w-full flex  gap-4">
-              <!-- PAID BY -->
-              <div class="flex items-center gap-2 text-sm">
+            <div class="divider my-0"></div>
 
-                <lucide-icon
-                  [img]="IndianRupee"
-                  class="w-4 h-4 text-success">
-                </lucide-icon>
+            <!-- MIDDLE: paid by + member avatars -->
+            <div class="flex items-center justify-between py-3">
 
-                <!--              <span class="opacity-70">Paid by</span>-->
-
-                @if (getUser(expense.paidBy); as user) {
-
-                  <div class="flex items-center gap-1">
-
-                    <!-- Avatar -->
-                    <div
-                      class="w-6 h-6 rounded-full overflow-hidden
-                           flex items-center justify-center text-xs font-semibol">
-                      @if (user.photoURL) {
-                        <img
-                          [alt]="user.name"
-                          [src]="user.photoURL"
-                          class="object-cover w-full h-full"
-                          referrerpolicy="no-referrer"
-                        />
-                      } @else {
-                        {{ user.name?.charAt(0)?.toUpperCase() }}
-                      }
-                    </div>
-
-
-                  </div>
-
-                }
-
-              </div>
-
-              <!-- SPLIT -->
-              @if (isPersonalExpense(expense.members)) {
-                <!-- Personal Badge -->
-                <span class="badge badge-soft badge-sm gap-1">
-                  <lucide-icon [img]="User" class="w-3 h-3"></lucide-icon>
-                  Personal
-                </span>
-
-              } @else {
-
-                <div (click)="openTransactionSplit(expense.members)" class="flex items-center gap-2 text-sm opacity-80">
-
-                  <lucide-icon
-                    [img]="Users"
-                    class="w-4 h-4 text-info flex-shrink-0">
-                  </lucide-icon>
-
-                  <!-- Overlapping Avatars -->
-                  <div class="flex items-center">
-
-                    @for (memberId of getSplitExpenseSortedMembers(expense.members).slice(0, 4); track memberId; let i = $index) {
-                      @if (getUser(memberId); as user) {
-                        <div
-                          [class.bg-base-300]="memberId !== currentUser()?.uid"
-                          [class.bg-primary]="memberId === currentUser()?.uid"
-                          [class.text-primary-content]="memberId === currentUser()?.uid"
-                          [style.z-index]="memberId === currentUser()?.uid ? 10 : (4 - i)"
-                          [title]="memberId === currentUser()?.uid ? 'You' : user.name"
-                          class="w-6 h-6 rounded-full overflow-hidden
-                           flex items-center justify-center text-xs font-semibold
-                           -ml-2 first:ml-0"
-                        >
-                          @if (user.photoURL) {
-                            <img
-                              [alt]="user.name"
-                              [src]="user.photoURL"
-                              class="object-cover w-full h-full"
-                              referrerpolicy="no-referrer"
-                            />
-                          } @else {
-                            {{ user.name?.charAt(0)?.toUpperCase() }}
-                          }
-                        </div>
-                      }
+              <!-- Paid by -->
+              @if (getUser(expense.paidBy); as payer) {
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-full bg-info/15 flex items-center justify-center
+                      text-[11px] font-medium text-info flex-shrink-0 overflow-hidden">
+                    @if (payer.photoURL) {
+                      <img [alt]="payer.name" [src]="payer.photoURL"
+                           class="w-full h-full object-cover" referrerpolicy="no-referrer"/>
+                    } @else {
+                      {{ payer.name?.charAt(0)?.toUpperCase() }}
                     }
-
-                    <!-- +N badge -->
-                    @if (expense.members.length > 4) {
-                      <div
-                        [style.z-index]="0"
-                        [title]="expense.members.length - 4 + ' more members'"
-                        class="w-6 h-6 rounded-full bg-base-300
-                       flex items-center justify-center text-xs font-semibold
-                       border-2 border-base-100 -ml-2">
-                        +{{ expense.members.length - 4 }}
-                      </div>
-                    }
-
                   </div>
-
+                  <div>
+                    <p class="text-[11px] text-base-content/40 leading-none">Paid by</p>
+                    <p class="text-[12px] font-medium mt-0.5">
+                      {{ payer.uid === currentUser()?.uid ? 'You' : payer.name }}
+                    </p>
+                  </div>
                 </div>
               }
+
+              <!-- Right side: Personal badge OR avatars -->
+              @if (isPersonalExpense(expense.members)) {
+                <span class="text-[11px] font-medium text-base-content/50 bg-base-200
+                     border border-base-300 px-2.5 py-1 rounded-md">
+                  Personal
+                </span>
+              } @else {
+                <div (click)="openTransactionSplit(expense)"
+                     class="flex items-center cursor-pointer">
+                  @for (memberId of getSplitExpenseSortedMembers(expense.members).slice(0, 4);
+                    track memberId; let i = $index) {
+                    @if (getUser(memberId); as user) {
+                      <div
+                        [class.bg-base-300]="memberId !== currentUser()?.uid"
+                        [class.bg-primary]="memberId === currentUser()?.uid"
+                        [class.text-base-content]="memberId !== currentUser()?.uid"
+                        [class.text-primary-content]="memberId === currentUser()?.uid"
+                        [style.z-index]="memberId === currentUser()?.uid ? 10 : (4 - i)"
+                        [title]="memberId === currentUser()?.uid ? 'You' : user.name"
+                        class="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center
+                       text-[10px] font-medium border-2 border-base-100
+                       -ml-1.5 first:ml-0 cursor-pointer"
+                      >
+                        @if (user.photoURL) {
+                          <img [alt]="user.name" [src]="user.photoURL"
+                               class="w-full h-full object-cover" referrerpolicy="no-referrer"/>
+                        } @else {
+                          {{ user.name?.charAt(0)?.toUpperCase() }}
+                        }
+                      </div>
+                    }
+                  }
+                  @if (expense.members.length > 4) {
+                    <div class="w-6 h-6 rounded-full bg-base-300 border-2 border-base-100
+                        flex items-center justify-center text-[10px] font-medium -ml-1.5">
+                      +{{ expense.members.length - 4 }}
+                    </div>
+                  }
+                </div>
+              }
+
             </div>
 
-            <!-- NOTES -->
-
-
+            <!-- NOTE (if any) -->
             @if (expense.notes) {
-              <details class="group">
+              <details class="group mb-3">
 
-                <summary class="flex items-center gap-1.5 text-xs opacity-50
-                    hover:opacity-80 cursor-pointer transition list-none">
-                  <lucide-icon [img]="StickyNote" class="w-3.5 h-3.5"></lucide-icon>
+                <summary class="flex items-center gap-1.5 text-xs text-base-content/40
+                    hover:text-base-content/70 cursor-pointer list-none
+                    transition-colors duration-150">
+                  <svg class="w-3 h-3 transition-transform duration-200 group-open:rotate-90"
+                       fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
                   <span class="group-open:hidden">Show note</span>
                   <span class="hidden group-open:inline">Hide note</span>
                 </summary>
 
-                <div class="mt-2 bg-base-200 px-3 py-2 rounded-lg text-sm">
+                <div class="mt-2 text-xs text-base-content/50 bg-base-200 px-3 py-2
+                border-l-2 border-base-300 leading-relaxed">
                   {{ expense.notes }}
                 </div>
 
               </details>
             }
+
+            <div class="divider my-0"></div>
+
+            <!-- BOTTOM: status badge + actions -->
+            <div class="flex items-center justify-between pt-3">
+
+              @if (hasUserPaid(expense)) {
+                <span class="text-xs font-medium text-success bg-success/10 px-2.5 py-1 rounded-md">
+                  Paid
+                </span>
+              } @else {
+                <span class="text-xs font-medium text-error bg-error/10 px-2.5 py-1 rounded-md">
+                  Unpaid
+                </span>
+              }
+
+              <div class="flex items-center gap-2">
+
+                @if (expense.paidBy != currentUser()?.uid && !hasUserPaid(expense)) {
+                  <button (click)="openUpiPayment(expense)" class="btn btn-xs btn-primary rounded-md">
+                    Pay now
+                  </button>
+
+
+                }
+                @if (expense.paidBy === currentUser()?.uid) {
+                  <button (click)="openEditDialog(expense)"
+                          class="btn btn-xs btn-ghost text-base-content/60 rounded-md">
+                    Edit
+                  </button>
+                  <button (click)="openDeleteDialog(expense.id!, expense.paidBy)"
+                          class="btn btn-xs btn-ghost text-error rounded-md">
+                    Delete
+                  </button>
+                }
+
+              </div>
+
+            </div>
+
           </div>
         </div>
-
       }
 
       <!-- INITAIL STATE -->
@@ -716,81 +700,113 @@
 
 <!--SHOW ALL TRANSACTION USER MODAL-->
 <dialog class="modal" id="transaction_members_modal">
-
   <div class="modal-box max-w-md">
 
-    <h3 class="font-semibold text-lg mb-6 flex items-center gap-2">
-      <lucide-icon [img]="Users" class="w-5 h-5 text-primary"></lucide-icon>
-      Split With
-    </h3>
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="font-semibold text-lg flex items-center gap-2">
+        <lucide-icon [img]="Users" class="w-5 h-5 text-primary"></lucide-icon>
+        Split With
+      </h3>
 
-    <div class="space-y-3">
+      @if (activeTransactionExpense(); as exp) {
+        <div class="text-right">
+          <p class="text-[11px] text-base-content/40">Total</p>
+          <p class="text-sm font-medium">
+            ₹ {{ exp.amount | number:'1.0-0' }}
+            <span class="text-[11px] text-base-content/40 font-normal">
+              / {{ exp.members.length }} people
+            </span>
+          </p>
+        </div>
+      }
+    </div>
 
-      @for (user of transactionSplitMembers(); track user.uid) {
+    <div class="space-y-2">
 
-        <div
-          class="flex items-center gap-3 p-3 rounded-lg bg-base-200">
+      @for (entry of transactionSplitMembers(); track entry.user.uid) {
+        <div class="flex items-center gap-3 p-3 rounded-lg bg-base-200">
 
-          <div class="avatar placeholder">
-
-            <div class="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center overflow-hidden">
-
-              @if (user.photoURL) {
-                <img
-                  [alt]="user.name"
-                  [src]="user.photoURL"
-                  class="object-cover w-full h-full"
-                  referrerpolicy="no-referrer"
-                />
-              } @else {
-                {{ user.name?.charAt(0)?.toUpperCase() }}
-              }
-
-            </div>
+          <!-- Avatar -->
+          <div class="w-10 h-10 rounded-full bg-base-300 flex-shrink-0
+                      flex items-center justify-center overflow-hidden
+                      text-sm font-medium">
+            @if (entry.user.photoURL) {
+              <img [alt]="entry.user.name" [src]="entry.user.photoURL"
+                   class="object-cover w-full h-full" referrerpolicy="no-referrer"/>
+            } @else {
+              {{ entry.user.name?.charAt(0)?.toUpperCase() }}
+            }
           </div>
 
-          <div>
-
-            @if (user.uid === currentUser().uid) {
-              <p class="font-medium text-sm">
-                You
-              </p>
-            } @else {
-              <p class="font-medium text-sm">
-                {{ user.name }}
-              </p>
-            }
-
-            <p class="text-xs opacity-60">
-              {{ user.email }}
+          <!-- Name + email -->
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium truncate">
+              {{ entry.user.uid === currentUser().uid ? 'You' : entry.user.name }}
+              @if (entry.isPayer) {
+                <span class="text-[11px] font-normal text-base-content/40 ml-1">
+                  (payer)
+                </span>
+              }
             </p>
+            <p class="text-xs text-base-content/40 truncate">{{ entry.user.email }}</p>
+          </div>
 
+          <!-- Share amount -->
+          @if (activeTransactionExpense(); as exp) {
+            <p class="text-sm font-medium flex-shrink-0">
+              ₹ {{ (exp.amount / exp.members.length) | number:'1.0-0' }}
+            </p>
+          }
+
+          <!-- Status + Pay button -->
+          <div class="flex items-center gap-2 flex-shrink-0">
+            @if (entry.hasPaid) {
+              <span class="text-xs font-medium text-success bg-success/10
+                           px-2.5 py-1 rounded-md">
+                Paid
+              </span>
+            } @else {
+              <span class="text-xs font-medium text-error bg-error/10
+                           px-2.5 py-1 rounded-md">
+                Unpaid
+              </span>
+
+              @if (entry.user.uid === currentUser().uid) {
+                <button
+                  (click)="markAsPaid(activeTransactionExpense()!)"
+                  class="btn btn-xs btn-primary rounded-md">
+                  Pay
+                </button>
+              }
+            }
           </div>
 
         </div>
-
       }
 
-      @if (connectedUserDetails().length === 0) {
-
-        <div class="text-center py-8 opacity-60">
-          No members found
-        </div>
-
+      @if (transactionSplitMembers().length === 0) {
+        <div class="text-center py-8 opacity-60">No members found</div>
       }
 
     </div>
 
     <div class="modal-action">
-
       <form method="dialog">
-        <button (click)="onCloseTransactionSplitMembersModal()" class="btn">
+        <button (click)="onCloseTransactionSplitMembersModal()" class="btn btn-sm w-full">
           Close
         </button>
       </form>
-
     </div>
 
   </div>
-
 </dialog>
+
+@if (showUpiModal() && upiExpense() && upiPayer()) {
+  <app-upi-payment
+    (cancelled)="showUpiModal.set(false)"
+    (paidConfirmed)="onUpiPaid($event)"
+    [expense]="upiExpense()!"
+    [payer]="upiPayer()!"
+  />
+}

@@ -19,35 +19,46 @@ export class TripSettlements {
   getUser     = input.required<(uid: string) => AppUser | undefined>();
 
   showModal = signal<'owe' | 'owed' | null>(null);
-
-  // ── Step 1: net balance per user ────────────────────────────────────────
-  totalOwed = computed(() =>
-    this.owedBreakdown().reduce((sum, e) => sum + e.amount, 0)
-  );
-  totalOwedToMe = computed(() =>
-    this.owedToMeBreakdown().reduce((sum, e) => sum + e.amount, 0)
-  );
   protected readonly IndianRupee = IndianRupee;
   protected readonly X = X;
-
-  // ── Public computed for template ─────────────────────────────────────────
   // Positive = creditor (is owed), Negative = debtor (owes)
   private netBalances = computed(() => {
     const balance = new Map<string, number>();
 
     for (const expense of this.expenses()) {
       const members = expense.members;
+      const settlements = expense.settlements || [];
+
       if (!members?.length) continue;
 
-      // Skip personal expenses
+      // Skip personal
       if (members.length === 1 && members[0] === expense.paidBy) continue;
+
+      // Only unpaid members
+      const unpaidMembers = members.filter(memberId => {
+        const s = settlements.find(x => x.userId === memberId);
+        return !s?.paid;
+      });
+
+      if (unpaidMembers.length === 0) continue;
 
       const share = expense.amount / members.length;
 
-      balance.set(expense.paidBy, (balance.get(expense.paidBy) ?? 0) + expense.amount);
+      // Only count amount still owed
+      const totalUnpaid = share * unpaidMembers.length;
 
-      for (const memberId of members) {
-        balance.set(memberId, (balance.get(memberId) ?? 0) - share);
+      // Payer gets only unpaid portion
+      balance.set(
+        expense.paidBy,
+        (balance.get(expense.paidBy) ?? 0) + totalUnpaid
+      );
+
+      // Only unpaid users owe
+      for (const memberId of unpaidMembers) {
+        balance.set(
+          memberId,
+          (balance.get(memberId) ?? 0) - share
+        );
       }
     }
 
@@ -88,20 +99,30 @@ export class TripSettlements {
 
     return result;
   });
+
+  // ── Public computed for template ─────────────────────────────────────────
   // ── Step 3: raw amounts before netting (to show mutual deduction hint) ──
   private rawOwedByMe = computed(() => {
-    const me  = this.currentUser()?.uid;
+    const me = this.currentUser()?.uid;
     const map = new Map<string, number>();
     if (!me) return map;
 
     for (const expense of this.expenses()) {
       const members = expense.members;
+      const settlements = expense.settlements || [];
+
       if (!members?.length || members.length === 1) continue;
+
+      const mySettlement = settlements.find(s => s.userId === me);
+      if (mySettlement?.paid) continue; //  skip if already paid
+
       const share = expense.amount / members.length;
+
       if (expense.paidBy !== me && members.includes(me)) {
         map.set(expense.paidBy, (map.get(expense.paidBy) ?? 0) + share);
       }
     }
+
     return map;
   });
   owedBreakdown = computed(() => {
@@ -122,22 +143,35 @@ export class TripSettlements {
       })
       .filter(e => e.user && e.amount > 0);
   });
+  // ── Step 1: net balance per user ────────────────────────────────────────
+  totalOwed = computed(() =>
+    this.owedBreakdown().reduce((sum, e) => sum + e.amount, 0)
+  );
   private rawOwedToMe = computed(() => {
-    const me  = this.currentUser()?.uid;
+    const me = this.currentUser()?.uid;
     const map = new Map<string, number>();
     if (!me) return map;
 
     for (const expense of this.expenses()) {
       const members = expense.members;
+      const settlements = expense.settlements || [];
+
       if (!members?.length || members.length === 1) continue;
+
+      if (expense.paidBy !== me) continue;
+
       const share = expense.amount / members.length;
-      if (expense.paidBy === me) {
-        for (const memberId of members) {
-          if (memberId === me) continue;
-          map.set(memberId, (map.get(memberId) ?? 0) + share);
-        }
+
+      for (const memberId of members) {
+        if (memberId === me) continue;
+
+        const s = settlements.find(x => x.userId === memberId);
+        if (s?.paid) continue; //  skip paid users
+
+        map.set(memberId, (map.get(memberId) ?? 0) + share);
       }
     }
+
     return map;
   });
   owedToMeBreakdown = computed(() => {
@@ -158,4 +192,7 @@ export class TripSettlements {
       })
       .filter(e => e.user && e.amount > 0);
   });
+  totalOwedToMe = computed(() =>
+    this.owedToMeBreakdown().reduce((sum, e) => sum + e.amount, 0)
+  );
 }

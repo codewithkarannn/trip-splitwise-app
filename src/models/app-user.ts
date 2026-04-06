@@ -4,5 +4,6 @@ export interface AppUser {
   name: string | null;
   email: string | null;
   photoURL: string | null;
+  upiId?: string;
 
 }

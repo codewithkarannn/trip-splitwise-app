@@ -1,4 +1,4 @@
-import {Component, inject, Injector, OnInit, signal, ViewChild} from '@angular/core';
+import {Component, inject, Injector, OnDestroy, OnInit, signal, ViewChild} from '@angular/core';
 import {AuthService} from '../../services/auth-service';
 import {TripService} from '../../services/trip-service';
 import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
@@ -17,7 +17,9 @@ import {
   Plane,
   Plus,
   Trash,
-  Users
+  Users,
+  Wallet,
+  X
 } from 'lucide-angular';
 import {DatePipe} from '@angular/common';
 import {Router} from '@angular/router';
@@ -26,48 +28,65 @@ import {filter, switchMap, take} from 'rxjs';
 import {ThemeSwitcher} from '../theme-switcher/theme-switcher';
 import {AppUser} from '../../models/app-user';
 import {UserList} from '../shared/user-list/user-list';
+import {UpiIdSettings} from '../upi-id-settings/upi-id-settings';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [FormsModule, LucideAngularModule, DatePipe, ThemeSwitcher, ReactiveFormsModule, UserList],
+  imports: [
+    FormsModule,
+    LucideAngularModule,
+    DatePipe,
+    ThemeSwitcher,
+    ReactiveFormsModule,
+    UserList,
+    UpiIdSettings
+  ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
-export class Dashboard implements OnInit {
+export class Dashboard implements OnInit, OnDestroy {
 
-  tripService = inject(TripService);
-  authService = inject(AuthService);
-  router = inject(Router);
-  selectedTripId = signal<string | null>(null);
-  tripName = '';
+  tripService  = inject(TripService);
+  authService  = inject(AuthService);
+  router       = inject(Router);
+
+  selectedTripId       = signal<string | null>(null);
+  tripName             = '';
   joinCode: string | null = null;
-  // connectedUserDetails = signal<AppUser[]>([]);
-  tripDate: string = new Date().toISOString().split('T')[0];
-  loading = signal(true);
-  myTrips = signal<Trip[]>([]);
-  shareCodeCopied = signal<string | null>(null);
-  currentUser = signal<AppUser>({} as AppUser);
-  userListSelectedTripId = signal<string >('');
+  tripDate: string     = new Date().toISOString().split('T')[0];
+  loading              = signal(true);
+  myTrips              = signal<Trip[]>([]);
+  shareCodeCopied      = signal<string | null>(null);
+  currentUser          = signal<AppUser>({} as AppUser);
+  userListSelectedTripId = signal<string>('');
+  showUpiModal         = signal(false);
+  showUpiNudge         = signal(false);
+
   @ViewChild('membersModal') membersModal!: UserList;
-  protected readonly Plane = Plane;
-  protected readonly Plus = Plus;
-  protected readonly Link = Link;
-  protected readonly LogOut = LogOut;
-  protected readonly Calendar = Calendar;
-  protected readonly Trash = Trash;
-  protected readonly Hash = Hash;
-  protected readonly ArrowRight = ArrowRight;
-  protected readonly Users = Users;
-  protected readonly ArrowLeft = ArrowLeft;
-  protected readonly AlertCircle = AlertCircle;
-  protected readonly Copy = Copy;
-  protected readonly Check = Check;
+
+  protected readonly Plane        = Plane;
+  protected readonly Plus         = Plus;
+  protected readonly Link         = Link;
+  protected readonly LogOut       = LogOut;
+  protected readonly Calendar     = Calendar;
+  protected readonly Trash        = Trash;
+  protected readonly Hash         = Hash;
+  protected readonly ArrowRight   = ArrowRight;
+  protected readonly Users        = Users;
+  protected readonly ArrowLeft    = ArrowLeft;
+  protected readonly AlertCircle  = AlertCircle;
+  protected readonly Copy         = Copy;
+  protected readonly Check        = Check;
+  protected readonly Wallet       = Wallet;
+  protected readonly X            = X;
+
   private injector = inject(Injector);
-  private fb = inject(FormBuilder);
+  private fb       = inject(FormBuilder);
   tripForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(3)]],
-    date: [new Date() , Validators.required]
+    date: [new Date(), Validators.required]
   });
+  private nudgeTimer?: ReturnType<typeof setTimeout>;
 
   get today(): Date {
     return new Date();
@@ -78,13 +97,29 @@ export class Dashboard implements OnInit {
       filter(user => !!user),
       take(1),
       switchMap(user => {
-        this.currentUser.set(user);
+        this.currentUser.set(user!);
+
+        // Show nudge only if user has no UPI ID — auto-hide after 5s
+        if (!user!.upiId) {
+          this.showUpiNudge.set(true);
+          this.nudgeTimer = setTimeout(() => this.showUpiNudge.set(false), 5000);
+        }
+
         return this.tripService.getMyTrips();
       })
     ).subscribe(trips => {
       this.myTrips.set(trips);
       this.loading.set(false);
     });
+  }
+
+  ngOnDestroy() {
+    if (this.nudgeTimer) clearTimeout(this.nudgeTimer);
+  }
+
+  dismissNudge() {
+    this.showUpiNudge.set(false);
+    if (this.nudgeTimer) clearTimeout(this.nudgeTimer);
   }
 
   async createTrip() {
@@ -96,10 +131,7 @@ export class Dashboard implements OnInit {
     const { name, date } = this.tripForm.value;
     await this.tripService.createTrip(name, new Date(date));
 
-    this.tripForm.reset({
-      name: '',
-      date: new Date()
-    });
+    this.tripForm.reset({ name: '', date: new Date() });
 
     const modal = document.getElementById('create_trip_modal') as HTMLDialogElement;
     modal?.close();
@@ -135,11 +167,11 @@ export class Dashboard implements OnInit {
   }
 
   getDate(date: any): Date | null {
-    if (!date) return null;                                          // missing
-    if (date instanceof Date) return date;                          // already Date
-    if (date?.toDate) return date.toDate();                        // Firestore Timestamp
-    if (date?.seconds) return new Date(date.seconds * 1000);       // plain object {seconds, nanoseconds}
-    if (typeof date === 'string') return new Date(date);           // string "2026-04-11"
+    if (!date) return null;
+    if (date instanceof Date) return date;
+    if (date?.toDate) return date.toDate();
+    if (date?.seconds) return new Date(date.seconds * 1000);
+    if (typeof date === 'string') return new Date(date);
     return null;
   }
 
@@ -158,13 +190,21 @@ export class Dashboard implements OnInit {
     modal?.close();
   }
 
-  async openMembersModal( tripId? : string ) {
-    const _tripId = tripId ;
-    if(_tripId){
-    console.log('_tripId', _tripId);
-    this.userListSelectedTripId.set(_tripId);
-    this.membersModal.open();
+  async openMembersModal(tripId?: string) {
+    if (tripId) {
+      this.userListSelectedTripId.set(tripId);
+      this.membersModal.open();
     }
+  }
+
+  onUpiSaved(upiId: string) {
+    this.currentUser.update(u => ({ ...u, upiId }));
+    this.showUpiModal.set(false);
+    this.dismissNudge();
+  }
+
+  onUpiRemoved() {
+    this.currentUser.update(u => ({ ...u, upiId: undefined }));
   }
   protected cancelJoinTrip() {
     const modal = document.getElementById('join_trip_modal') as HTMLDialogElement;
