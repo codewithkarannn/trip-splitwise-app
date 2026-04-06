@@ -206,7 +206,6 @@ export class Dashboard implements OnInit, OnDestroy {
   onUpiRemoved() {
     this.currentUser.update(u => ({ ...u, upiId: undefined }));
   }
-
   protected cancelJoinTrip() {
     const modal = document.getElementById('join_trip_modal') as HTMLDialogElement;
     modal?.close();

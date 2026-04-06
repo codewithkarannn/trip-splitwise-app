@@ -2,12 +2,11 @@ import {DestroyRef, inject, Injectable} from '@angular/core';
 import {Auth, authState} from '@angular/fire/auth';
 import {GoogleAuthProvider, signInWithPopup, signOut, User} from 'firebase/auth';
 import {collection, doc, onSnapshot, query, setDoc, where} from 'firebase/firestore';
-import {Observable, of} from 'rxjs';
+import {Observable, of, switchMap} from 'rxjs';
 import {AppUser} from '../models/app-user';
 import {Router} from '@angular/router';
 import {takeUntilDestroyed, toSignal} from '@angular/core/rxjs-interop';
-import {map} from 'rxjs/operators';
-import {Firestore} from '@angular/fire/firestore';
+import {docData, Firestore} from '@angular/fire/firestore';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -21,18 +20,17 @@ export class AuthService {
   // undefined = loading, null = logged out, AppUser = logged in
   _user = toSignal<AppUser | null | undefined>(
     this.authState$.pipe(
-      map(firebaseUser => {
-        if (!firebaseUser) return null;
-        return {
-          uid: firebaseUser.uid,
-          name: firebaseUser.displayName ?? 'Anonymous',
-          email: firebaseUser.email ?? '',
-          photoURL: firebaseUser.photoURL ?? ''
-        } satisfies AppUser;
+      switchMap(firebaseUser => {
+        if (!firebaseUser) return of(null);
+
+        // Live listener on the user's Firestore doc
+        const userRef = doc(this.fireStore, `users/${firebaseUser.uid}`);
+        return docData(userRef, { idField: 'uid' }) as Observable<AppUser>;
       })
     ),
     { initialValue: undefined }
   );
+
 
   constructor() {
     this.authState$.pipe(
@@ -91,6 +89,7 @@ export class AuthService {
       name: user.displayName,
       email: user.email,
       photoURL: user.photoURL,
+      upiId: null,
       updatedAt: new Date()
     }, { merge: true });
   }

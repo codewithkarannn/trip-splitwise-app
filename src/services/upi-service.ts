@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {Firestore} from '@angular/fire/firestore';
+import {deleteField, Firestore} from '@angular/fire/firestore';
 import {Expense} from '../models/expense';
 import {AppUser} from '../models/app-user';
 import {UpiPaymentDetails} from '../models/upi-payment-details';
@@ -19,9 +19,6 @@ export class UpiService {
     return /iphone|ipad|ipod/i.test(navigator.userAgent);
   }
 
-  isMobile(): boolean {
-    return this.isAndroid() || this.isIos();
-  }
 
   buildPaymentDetails(expense: Expense, payer: AppUser): UpiPaymentDetails {
     const amount = (expense.amount / expense.members.length).toFixed(2);
@@ -53,6 +50,11 @@ export class UpiService {
 
   validateUpiId(upiId: string): boolean {
     return /^[\w.\-]{3,}@[a-zA-Z]{3,}$/.test(upiId.trim());
+  }
+
+  async removeUpiId(uid: string) {
+    const ref = doc(this.fireStore, `users/${uid}`);
+    await updateDoc(ref, { upiId: deleteField() });
   }
 
 }
