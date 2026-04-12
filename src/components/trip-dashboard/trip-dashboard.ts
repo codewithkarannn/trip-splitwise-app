@@ -83,6 +83,7 @@ export class TripDashboard implements OnInit {
   route = inject(ActivatedRoute);
   routeLink = inject(Router);
   searchQuery = signal<string>('');
+  allTripExpenses = signal<Expense[]>([]);
   protected readonly Receipt = Receipt;
   protected readonly Users = Users;
   protected readonly Calendar = Calendar;
@@ -156,6 +157,7 @@ export class TripDashboard implements OnInit {
     this.upiPayer.set(payer);
     this.showUpiModal.set(true);
   }
+
   onUpiPaid(expense: Expense) {
     this.markAsPaid(expense);
     this.showUpiModal.set(false);
@@ -273,66 +275,65 @@ export class TripDashboard implements OnInit {
 
   getAllExpenses(tripId: string) {
     this.expenseService.getExpenses(tripId).subscribe(expenses => {
-
       if (!expenses) return;
 
       const currentUserId = this.currentUser()?.uid;
 
-      const filteredExpenses = expenses.filter(expense =>
-        expense.members.includes(currentUserId) ||
-        expense.paidBy === currentUserId
+      // All expenses → for settlement summary calculation
+      this.allTripExpenses.set(expenses);
+
+      // Only your expenses → for card list
+      const mine = expenses.filter(e =>
+        e.members.includes(currentUserId) ||
+        e.paidBy === currentUserId
       );
 
-      this.tripExpenses.set(filteredExpenses);
-      const total = filteredExpenses.reduce((sum, expense) => {
+      this.tripExpenses.set(mine);
 
-        const isPersonal =
-          expense.members.length === 1 &&
-          expense.members[0] === currentUserId;
-
-        if (isPersonal) {
-          return sum + expense.amount;
-        }
-
-        // Split case
-        const splitAmount = expense.amount / expense.members.length;
-        return sum + splitAmount;
-
-      }, 0);
-
-      this.totalExpense.set(total);
-
+      this.totalExpense.set(
+        mine.reduce((sum, e) => {
+          const isPersonal =
+            e.members.length === 1 && e.members[0] === currentUserId;
+          return sum + (isPersonal
+            ? e.amount
+            : e.amount / e.members.length);
+        }, 0)
+      );
     });
   }
+
   async addExpense() {
     if (this.expenseForm.invalid) {
       this.expenseForm.markAllAsTouched();
       return;
     }
 
-    let selectedMembers = this.expenseForm.value.members || [];
     const payer = this.isEditMode()
-      ? (this.tripExpenses().find(e => e.id === this.editingExpenseId())?.paidBy ?? this.currentUser().uid)
+      ? (this.tripExpenses().find(e => e.id === this.editingExpenseId())?.paidBy
+        ?? this.currentUser().uid)
       : this.currentUser().uid;
 
-    if (!selectedMembers.includes(payer)) {
-      selectedMembers = [...selectedMembers, payer];
-    }
+    // Use Set to guarantee no duplicates
+    const selectedMembers = [
+      ...new Set([...this.expenseForm.value.members ?? [], payer])
+    ];
 
-    const settlements = selectedMembers.map((uid : string) => ({
+    const settlements = selectedMembers.map(uid => ({
       userId: uid,
-      paid: uid === payer
+      paid:   uid === payer,
     }));
+
     const expenseData = {
-      title: this.expenseForm.value.title,
-      amount: this.expenseForm.value.amount,
-      date: this.expenseForm.value.date,
-      notes: this.expenseForm.value.notes || '',
-      members: selectedMembers,
-      tripId: this.tripDetails().id!,
-      paidBy: payer,
-      ...(this.isEditMode() ? {} : { settlements })
+      title:       this.expenseForm.value.title,
+      amount:      this.expenseForm.value.amount,
+      date:        this.expenseForm.value.date,
+      notes:       this.expenseForm.value.notes || '',
+      members:     selectedMembers,
+      tripId:      this.tripDetails().id!,
+      paidBy:      payer,
+      settlements,
     };
+
     if (this.isEditMode()) {
       await this.expenseService.updateExpense(
         this.tripDetails().id!,
@@ -342,7 +343,6 @@ export class TripDashboard implements OnInit {
     } else {
       await this.expenseService.addExpense({
         ...expenseData,
-        settlements,
         createdAt: new Date()
       });
     }
@@ -350,42 +350,51 @@ export class TripDashboard implements OnInit {
     this.closeExpenseModal();
   }
 
-
   hasUserPaid(expense: Expense): boolean {
     const uid = this.currentUser()?.uid;
     if (!uid) return false;
 
-    // Payer is always paid
+    // Personal expense — always paid
+    if (this.isPersonalExpense(expense.members)) return true;
+
+    // Payer always paid — they put the money out
     if (expense.paidBy === uid) return true;
 
-    // If no settlements field yet, treat as unpaid
-    if (!expense.settlements?.length) return false;
+    // User is not even a member of this expense
+    if (!expense.members.includes(uid)) return true;
 
-    return expense.settlements.find(s => s.userId === uid)?.paid ?? false;
+    // Check settlements array
+    if (expense.settlements?.length) {
+      const mySettlement = expense.settlements.find(s => s.userId === uid);
+
+      // User exists in settlements
+      if (mySettlement) return mySettlement.paid;
+
+
+      return false;
+    }
+
+    return false;
   }
 
   markAsPaid(expense: Expense) {
     const uid = this.currentUser()?.uid;
     if (!uid) return;
 
-    // Build settlements from members if missing (old expenses won't have it)
     const existing = expense.settlements?.length
       ? expense.settlements
       : expense.members.map(memberId => ({
         userId: memberId,
-        paid: memberId === expense.paidBy  // payer is already paid
+        paid:   memberId === expense.paidBy,
       }));
 
-    const updatedSettlements = existing.map(s =>
+    const updated = existing.map(s =>
       s.userId === uid ? { ...s, paid: true } : s
     );
 
-    this.expenseService.updateExpense(
-      expense.tripId,
-      expense.id!,
-      { settlements: updatedSettlements }
-    );
+    this.expenseService.updateExpense(expense.tripId, expense.id!, { settlements: updated });
   }
+
   closeExpenseModal() {
     this.isEditMode.set(false);
     this.editingExpenseId.set(null);
@@ -502,6 +511,35 @@ export class TripDashboard implements OnInit {
 
   }
 
+  async migrateExpenses() {
+    const tripId = this.tripDetails().id;
+    if (!tripId) return;
+
+    const expenses = await this.expenseService.getExpensesOnce(tripId);
+    let count = 0;
+
+    for (const expense of expenses) {
+      // Skip expenses that already have settlements
+      if (expense.settlements?.length) continue;
+
+      // Skip personal expenses
+      if (!expense.members?.length) continue;
+      if (expense.members.length === 1) continue;
+
+      const settlements = expense.members.map((uid: string) => ({
+        userId: uid,
+        paid:   uid === expense.paidBy,  // only payer is paid
+      }));
+
+      await this.expenseService.updateExpense(
+        tripId, expense.id!, { settlements }
+      );
+      count++;
+    }
+
+    alert(`Migration done! Fixed ${count} expenses.`);
+  }
+
   protected openTransactionSplit(expense: Expense) {
     this.activeTransactionExpense.set(expense);
 
@@ -515,15 +553,21 @@ export class TripDashboard implements OnInit {
       sorted.map(user => ({
         user,
         isPayer: user.uid === expense.paidBy,
-        hasPaid: this.hasUserPaid({ ...expense, members: [user.uid] })
-          || user.uid === expense.paidBy
-          || (expense.settlements?.find(s => s.userId === user.uid)?.paid ?? false)
+        hasPaid: (() => {
+          if (user.uid === expense.paidBy) return true;
+          if (expense.settlements?.length) {
+            const s = expense.settlements.find(x => x.userId === user.uid);
+            return s?.paid ?? false;
+          }
+          return false;
+        })()
       }))
     );
 
     const modal = document.getElementById('transaction_members_modal') as HTMLDialogElement;
     modal?.showModal();
   }
+
   protected onCloseTransactionSplitMembersModal() {
     const modal = document.getElementById('transaction_members_modal') as HTMLDialogElement;
     modal?.close();

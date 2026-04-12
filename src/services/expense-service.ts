@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc} from 'firebase/firestore';
+import {addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, orderBy, query, updateDoc} from 'firebase/firestore';
 import {Expense} from '../models/expense';
 import {Observable} from 'rxjs';
 import {Firestore} from '@angular/fire/firestore';
@@ -21,6 +21,12 @@ export class ExpenseService {
       console.error('Error adding expense:', error);
       throw error;
     }
+  }
+
+  async getExpensesOnce(tripId: string): Promise<Expense[]> {
+    const ref  = collection(this.fireStore, `trips/${tripId}/expenses`);
+    const snap = await getDocs(ref);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Expense));
   }
 
   deleteExpense(tripId: string, expenseId: string) {
