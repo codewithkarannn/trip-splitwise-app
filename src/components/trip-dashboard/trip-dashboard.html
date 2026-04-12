@@ -1,6 +1,7 @@
 <div class="min-h-screen bg-base-200 py-8 px-4">
   <div class="max-w-6xl mx-auto">
 
+  
     <!-- HEADER -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
 
@@ -67,7 +68,7 @@
 
       <app-trip-settlements
         [currentUser]="currentUser()"
-        [expenses]="tripExpenses()"
+        [expenses]="allTripExpenses()"
         [getUser]="getUser.bind(this)"
       />
 
