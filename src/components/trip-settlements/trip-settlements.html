@@ -11,6 +11,8 @@
     <div class="stat-value text-error text-3xl">
       ₹ {{ totalOwed() | number:'1.0-0' }}
     </div>
+
+
     <div class="stat-desc text-xs mt-1">
       @if (totalOwed() > 0) {
         Tap to see breakdown
@@ -108,6 +110,20 @@
               </div>
             }
 
+
+            <button
+              (click)="$event.stopPropagation(); openUpiDialog(entry.user!.uid)"
+              [disabled]="settling() === entry.user!.uid"
+              class="btn btn-sm btn-error btn-outline w-full mt-1 gap-2">
+              @if (settling() === entry.user!.uid) {
+                <span class="loading loading-spinner loading-xs"></span>
+                Settling...
+              } @else {
+                <lucide-icon [img]="Smartphone" class="w-4 h-4"></lucide-icon>
+                Pay via UPI
+              }
+            </button>
+
           </div>
         }
 
@@ -161,6 +177,19 @@
               </div>
             }
 
+            <button
+              (click)="$event.stopPropagation(); settleWith(entry.user!.uid)"
+              [disabled]="settling() === entry.user!.uid"
+              class="btn btn-sm btn-success btn-outline w-full mt-1">
+              @if (settling() === entry.user!.uid) {
+                <span class="loading loading-spinner loading-xs"></span>
+                Settling...
+              } @else {
+                Mark as Paid
+              }
+            </button>
+
+
           </div>
         }
 
@@ -178,3 +207,12 @@
   </div>
   <div (click)="showModal.set(null)" class="modal-backdrop"></div>
 </dialog>
+<!-- UPI PAYMENT DIALOG -->
+@if (upiEntry()) {
+  <app-upi-payment
+    (cancelled)="upiEntry.set(null)"
+    (paidConfirmed)="onUpiConfirmed($event)"
+    [expense]="upiEntry()!.expense"
+    [payer]="upiEntry()!.payer"
+  />
+}

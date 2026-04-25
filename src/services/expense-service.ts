@@ -50,5 +50,20 @@ export class ExpenseService {
 
       return () => unsub();
     });
+
+  }
+  async markSettlementPaid(tripId: string, expenseId: string, debtorId: string) {
+    const expense = (await this.getExpensesOnce(tripId))
+      .find(e => e.id === expenseId);
+    if (!expense) return;
+
+    const existing = expense.settlements ?? [];
+
+    // If entry exists, flip to paid. Otherwise add it.
+    const updated = existing.some(s => s.userId === debtorId)
+      ? existing.map(s => s.userId === debtorId ? { ...s, paid: true } : s)
+      : [...existing, { userId: debtorId, paid: true }];
+
+    return this.updateExpense(tripId, expenseId, { settlements: updated });
   }
 }

@@ -540,6 +540,15 @@ export class TripDashboard implements OnInit {
     alert(`Migration done! Fixed ${count} expenses.`);
   }
 
+  getDate(date: any): Date | null {
+    if (!date) return null;
+    if (date instanceof Date) return date;
+    if (date?.toDate) return date.toDate();        // Firestore Timestamp
+    if (date?.seconds) return new Date(date.seconds * 1000);
+    if (typeof date === 'string') return new Date(date);
+    return null;
+  }
+
   protected openTransactionSplit(expense: Expense) {
     this.activeTransactionExpense.set(expense);
 
